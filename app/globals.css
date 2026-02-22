@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Antic&family=Anton+SC&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -121,12 +122,43 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+.anton-sc-regular {
+  font-family: "Anton SC", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.antic-regular {
+  font-family: "Antic", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.oswald-light {
+  font-family: "Oswald", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 300;
+  font-style: normal;
+}
+
+.dark-mode {
+  background-color: var(--dark-bg-color);
+  color: var(--dark-text-color);
+}
+
+.light-mode {
+  background-color: var(--light-bg-color);
+  color: var(--light-text-color);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
 }
 
+@layer components {
+  .navbar {
+    @apply flex items-center justify-between mx-auto w-full px-14 py-4 bg-black max-sm:px-4;
+  }
+}

@@ -2,9 +2,7 @@ import { Button } from "@/components/ui/button"
 
 const page = () => {
   return (
-    <div>
-      <Button>Click me</Button>
-    </div>
+    <div>hey</div>
   )
 }
 
