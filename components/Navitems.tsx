@@ -17,7 +17,7 @@ const Navitems = () => {
   return (
     <nav className="text-xl flex items-center gap-8 oswald-light">
       {navItems.map(({label, href}) => (
-        <Link key={label} href={href} className={cn(pathname === href && 'font-semibold')}>
+        <Link key={label} href={href} className={cn(pathname === href && 'font-bold')}>
           {label}
         </Link>
       ))}

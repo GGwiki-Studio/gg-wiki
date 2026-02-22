@@ -7,7 +7,7 @@ const Navbar = () => {
     <nav className="navbar">
         <Link href="/">
             <div className="flex items-center gap-2.5 cursor-pointer">
-                <h1 className="text-2xl font-bold anton-sc-regular">GGwiki</h1>
+                <h1 className="text-4xl anton-sc-regular">GGwiki</h1>
             </div>
         </Link>
         <div className="flex-1 hidden md:flex justify-center">
