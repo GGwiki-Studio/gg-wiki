@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { AuthProvider } from "@/components/context/AuthProvider";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "GGWIKI",
@@ -20,6 +21,7 @@ export default function RootLayout({
           <Navbar />
           {children}
         </AuthProvider>
+        <Toaster />
       </body>
     </html>
   );
