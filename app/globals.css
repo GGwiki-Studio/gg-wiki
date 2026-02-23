@@ -161,4 +161,8 @@
   .navbar {
     @apply flex items-center justify-between mx-auto w-full px-14 py-4 bg-black max-sm:px-4;
   }
+
+  .radio-button {
+    @apply flex w-32 justify-center items-center cursor-pointer rounded-md text-black bg-white px-4 py-2 text-sm font-medium  hover:bg-gray-700  hover:text-white peer-data-[state=checked]:border-gray-600  peer-data-[state=checked]:bg-gray-600 peer-data-[state=checked]:text-white;
+  }
 }
