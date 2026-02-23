@@ -2,20 +2,35 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter} from "next/navigation"
+import useAuth from "./hooks/useAuth"
 
 interface GameCardProps {
-  gameSlug: string;
-  name: string;
-  thumbnailUrl: string;
-  members: number;
+    gameSlug: string;
+    name: string;
+    thumbnailUrl: string;
+    members: number;
 }
 
 
 
 const GameCard = ({ gameSlug, name, thumbnailUrl, members }: GameCardProps) => {
-  const [joined, setJoined] = useState(false);
+    const [joined, setJoined] = useState(false);
+    const router = useRouter();
+    const auth = useAuth();
+    const user = auth?.user;
 
-  return (
+    const handleJoinClick = (e: React.MouseEvent) => {
+        if (!user) {
+        e.preventDefault();
+        router.push("/registration");
+        return;
+        }
+        setJoined(!joined)
+        return;
+    }
+
+    return (
     <article className="bg-gray-950 rounded-lg p-4 shadow-lg">
         <div className="flex flex-col gap-4">
             <div className="rounded-lg overflow-hidden ">
@@ -35,7 +50,7 @@ const GameCard = ({ gameSlug, name, thumbnailUrl, members }: GameCardProps) => {
                     Open
                 </button>
             </Link>
-            <button onClick={() => setJoined(!joined)} className="w-full bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded cursor-pointer">
+            <button onClick={(e) => handleJoinClick(e)} className="w-full bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded cursor-pointer">
                 {joined ? "Leave" : "Join"}
             </button>
         </div>

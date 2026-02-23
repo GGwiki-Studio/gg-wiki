@@ -1,8 +1,10 @@
+'use client'
 import Link from "next/link"
 import Navitems from "./Navitems"
 import Search from "./Search"
 
 const Navbar = () => {
+
   return (
     <nav className="navbar">
         <Link href="/">
@@ -15,7 +17,6 @@ const Navbar = () => {
         </div>
         <div className="flex items-center gap-8">
             <Navitems />
-            <p>Sign In</p>
         </div>
     </nav>
   )
