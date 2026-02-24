@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { usePathname, useRouter} from "next/navigation"
 import useAuth from "./hooks/useAuth"
+import { toast } from "sonner"
 
 const navItems = [
   {label: "Home", href: "/"},
@@ -21,6 +22,7 @@ const Navitems = () => {
     if (protectedItem && !user) {
       e.preventDefault();
       router.push("/registration");
+      toast.error("You must be logged in to access this page.");
       return;
     }
   }
@@ -41,7 +43,7 @@ const Navitems = () => {
             {item.label}
           </Link>
         )
-  })}
+      })}
     </nav>
   )
 }

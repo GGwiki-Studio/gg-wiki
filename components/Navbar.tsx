@@ -3,7 +3,7 @@ import Link from "next/link"
 import Navitems from "./Navitems"
 import Search from "./Search"
 import { cn } from "@/lib/utils"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import useAuth from "./hooks/useAuth"
 import Image from "next/image"
 import { useEffect, useState } from "react"
@@ -15,6 +15,7 @@ const Navbar = () => {
   const auth = useAuth()
   const user = auth?.user
   const [showDropDown, setShowDropDown] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     setShowDropDown(false)
@@ -22,6 +23,11 @@ const Navbar = () => {
 
   const showOptions = () => {
     setShowDropDown(!showDropDown)
+  }
+
+  const logOut = () => {
+    client.auth.signOut()
+    router.push("/");
   }
 
   return (
@@ -45,7 +51,7 @@ const Navbar = () => {
                 <div className="bg-[#252525] absolute top-12 right-4 flex flex-col gap-4 p-4 rounded min-w-37.5">
                   <a href="/profile" className="cursor-pointer hover:opacity-80">Profile</a>
                   <a href="/settings" className="cursor-pointer hover:opacity-80">Settings</a>
-                  <a onClick={() => client.auth.signOut()} className="cursor-pointer hover:opacity-80">Logout</a>
+                  <a onClick={logOut} className="cursor-pointer hover:opacity-80">Logout</a>
                 </div>
               )}
             </div>
