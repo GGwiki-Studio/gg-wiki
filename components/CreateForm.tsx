@@ -9,7 +9,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "./ui/form"
 import { Input } from "./ui/input"
 import { Button } from "./ui/button"
@@ -26,6 +25,11 @@ import {
   RadioGroupItem,
 } from "./ui/radio-group"
 import TagInput from "./TagInput"
+import { createStrat } from "@/lib/actions/strat.actions"
+import { redirect } from "next/navigation"
+import { toast } from "sonner"
+import { useState, useEffect } from "react"
+import { client } from "@/api/client"
 
 
 const formSchema = z.object({
@@ -37,7 +41,25 @@ const formSchema = z.object({
   content: z.string().min(1, { message: "Description is required" }),
 })
 
+interface Game {
+  id: string
+  name: string
+  slug: string
+}
+
+interface Map {
+  id: string
+  name: string
+  slug: string
+  game_id: string
+}
+
 const CreateForm = () => {
+  const [games, setGames] = useState<Game[]>([])
+  const [allMaps, setAllMaps] = useState<Map[]>([])
+  const [filteredMaps, setFilteredMaps] = useState<Map[]>([])
+  const [loading, setLoading] = useState(true)
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -49,9 +71,65 @@ const CreateForm = () => {
       content: "",
     },
   })
+
+  const selectedGame = form.watch("game")
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const { data: gamesData, error: gamesError } = await client.from('games').select('id, name, slug')
+        if(gamesError) throw gamesError
+
+        const { data: mapsData, error: mapsError } = await client.from('maps').select('id, name, slug, game_id').order('name')
+        if (mapsError) throw mapsError
+
+        setGames(gamesData || []);
+        setAllMaps(mapsData || []);
+      } catch (error) {
+        console.error('Failed to fetch data:', error)
+        toast.error('Failed to load data. Please try again later.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
+  useEffect(() => {
+    if(selectedGame && allMaps.length > 0){
+      const game = games.find(g => g.slug === selectedGame)
+
+      if(game){
+        const maps = allMaps.filter(map => map.game_id === game.id)
+
+        setFilteredMaps(maps)
+        const currentMap = form.getValues("map")
+
+        if(currentMap && !maps.some(m => m.slug === currentMap)){
+          form.setValue("map", "")
+        }
+      }
+
+    } else {
+      setFilteredMaps([])
+    }
+  }, [selectedGame, allMaps, games, form])
+
+  if(loading){
+    return <div>Loading...</div>
+  }
  
-  const onSubmit = (data: z.infer<typeof formSchema>) => {
-      console.log(data)
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    const strat = await createStrat(data)
+
+    if(strat) {
+      redirect(`games/${data.game}/maps/${data.map}/strategies/${strat.id}`)
+    } else {
+      console.error("Failed to create strat")
+      toast.error("Failed to create strat. Please try again.")
+    }
+    form.reset()
   }
   
   return (
@@ -75,10 +153,11 @@ const CreateForm = () => {
                   <SelectValue placeholder="Select a game" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="counter-strike-source-2">Counter-Strike Source 2</SelectItem>
-                  <SelectItem value="valorant">Valorant</SelectItem>
-                  <SelectItem value="league-of-legends">League of Legends</SelectItem>
-                  <SelectItem value="rainbow-six-siege">Rainbow Six Siege</SelectItem>
+                    {games.map((game) => (
+                      <SelectItem key={game.id} value={game.slug}>
+                        {game.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </FormControl>
@@ -89,16 +168,16 @@ const CreateForm = () => {
           <FormItem>
             <FormLabel>Map</FormLabel>
             <FormControl>
-              <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value} disabled={!selectedGame || filteredMaps.length === 0}>
                 <SelectTrigger className="w-full capitalize">
-                  <SelectValue placeholder="Select a map" />
+                  <SelectValue placeholder={!selectedGame ? "Select a game first" : filteredMaps.length === 0 ? "No maps available" : "Select a map"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="accent">Accent</SelectItem>
-                  <SelectItem value="bind">Bind</SelectItem>
-                  <SelectItem value="breeze">Breeze</SelectItem>
-                  <SelectItem value="fracture">Fracture</SelectItem>
-                  <SelectItem value="haven">Haven</SelectItem>
+                  {filteredMaps.map((map) => (
+                    <SelectItem key={map.id} value={map.slug}>
+                      {map.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </FormControl>

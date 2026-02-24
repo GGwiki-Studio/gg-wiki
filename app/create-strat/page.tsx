@@ -1,3 +1,4 @@
+'use client'
 import CreateForm from "@/components/CreateForm"
 
 const page = () => {
