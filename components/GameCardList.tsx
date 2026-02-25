@@ -6,7 +6,7 @@ import{ client } from "@/api/client"
 interface Game{
   slug: string;
   name: string;
-  //cover_image_url: string;
+  cover_image_url: string;
   member_count: number;
 }
 
@@ -41,9 +41,9 @@ const GameCardList = () => {
     fetchData()
   }, [])
 
-  if(loading){
-    return <div>Loading...</div>
-  }
+  // if(loading){
+  //   return <div>Loading...</div>
+  // }
 
   return (
     <section className="pl-4">
