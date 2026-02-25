@@ -1,5 +1,4 @@
 'use client'
-import useAuth from "@/components/hooks/useAuth"
 import { client } from "@/api/client"
 
 
@@ -12,48 +11,41 @@ interface CreateStrat {
     content: string;
 }
 
-export const createStrat = async (formData: CreateStrat) => {
-    const auth = useAuth()
-    const user = auth?.user
-    const { user_id: author } = user.id;
-    const gameID = client.from("games").select("id").eq("name", formData.game).single()
-    const mapId = client.from("maps").select("id").eq("name", formData.map).single()
+export const createStrat = async (formData: CreateStrat, author: any) => {
+    const gameID = (await client.from("games").select("id").eq("slug", formData.game).single()).data
+    const mapId = (await client.from("maps").select("id").eq("slug", formData.map).single()).data
 
     const tagIds = await Promise.all(
-    formData.tags.map(async (tagName) => {
-        const { data: existingTag } = await client
-            .from("tags")
-            .select("id")
-            .eq("name", tagName)
-            .maybeSingle()
+        formData.tags.map(async (tagName) => {
+            const { data: existingTag } = await client
+                .from("tags")
+                .select("id")
+                .eq("name", tagName)
+                .maybeSingle()
 
-        if (existingTag) {
-            return existingTag.id
+            if (existingTag) {
+                return existingTag.id
+            }
         }
+    ))
 
-        const { data: newTag, error: createError } = await client
-            .from("tags")
-            .insert({ 
-                name: tagName,
-                count: 1 
-            })
-            .select("id")
-            .single()
+    if (!gameID) {
+        throw new Error("Game not found")
+    }
 
-        if (createError) throw createError
-            return newTag.id
-        })
-    )
+    if (!mapId) {
+        throw new Error("Map not found")
+    }
 
     const { data, error } = await client
-        .from("strats")
+        .from("strategies")
         .insert({
             title: formData.title,
-            game_id: gameID,
-            map_id: mapId,
+            game_id: gameID.id,
+            map_id: mapId.id,
             difficulty: formData.difficulty,
             content: formData.content,
-            author,
+            user_id: author,
         })
         .select()
         .single()
@@ -75,9 +67,8 @@ export const createStrat = async (formData: CreateStrat) => {
 
         if (tagAssociationError) {
             console.error("Failed to associate tags:", tagAssociationError)
-            // Don't throw - strat is created, just log the error
         }
     }
 
-    return data[0]
+    return data
 }

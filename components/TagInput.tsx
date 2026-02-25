@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 import { Input } from './ui/input'
 import { client } from '@/api/client'
-import { useDebounce } from '@/components/hooks/useDebounce' // You'll need to create this
+import { useDebounce } from '@/components/hooks/useDebounce'
+import { toast } from 'sonner'
 
 interface TagInputProps {
   value?: string[]
@@ -47,7 +48,7 @@ const TagInput: React.FC<TagInputProps> = ({value = [], onChange, placeholder = 
           .from('tags')
           .select('id, name')
           .ilike('name', `%${debouncedInput}%`)
-          .order('count', { ascending: false })
+          .order('name', { ascending: false })
           .limit(5)
 
         if (error) throw error
@@ -86,19 +87,29 @@ const TagInput: React.FC<TagInputProps> = ({value = [], onChange, placeholder = 
         .maybeSingle()
 
       if (fetchError) throw fetchError
+      if(fetchError){
+        toast.error('error fetching tag exists')
+      }
 
-      const { data: newTag, error: createError } = await client
-        .from('tags')
-        .insert({
-          name: tagName,
-          slug: tagName.toLowerCase().replaceAll(' ', '-'),
-        })
-        .select('name')
-        .single()
+      let newTag
+      if(!existingTag){
+        const { data , error: createError } = await client
+          .from('tags')
+          .insert({
+            name: tagName,
+            slug: tagName.toLowerCase().replaceAll(' ', '-'),
+          })
+          .select('name')
+          .single()
 
-      if (createError) throw createError
+        if (createError) throw createError
+        if(createError){
+          toast.error('error creating new tag')
+        }
+        newTag = data
+      }
+      return newTag?.name;
       
-      return newTag.name
     } catch (error) {
       console.error('Error ensuring tag exists:', error)
       return tagName
@@ -180,7 +191,7 @@ const TagInput: React.FC<TagInputProps> = ({value = [], onChange, placeholder = 
               type="button"
               onClick={() => removeTag(index)}
               className="hover:bg-gray-600 rounded-full p-0.5 transition-colors"
-              disabled={loading}
+              //disabled={loading}
             >
               <X size={16} />
             </button>
@@ -199,7 +210,7 @@ const TagInput: React.FC<TagInputProps> = ({value = [], onChange, placeholder = 
             onFocus={() => setShowSuggestions(true)}
             placeholder={tags.length === 0 ? placeholder : ''}
             className="w-full outline-none bg-transparent text-sm border-0 focus-visible:ring-0 px-0"
-            disabled={loading}
+            //disabled={loading}
           />
           {loading && (
             <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
@@ -222,7 +233,7 @@ const TagInput: React.FC<TagInputProps> = ({value = [], onChange, placeholder = 
                 <button
                   key={suggestion.id}
                   type="button"
-                  className="w-full text-left px-3 py-2 hover:bg-gray-100 flex justify-between items-center"
+                  className="w-full text-left px-3 py-2 text-black hover:bg-gray-100 flex justify-between items-center"
                   onClick={() => handleSuggestionClick(suggestion)}
                   disabled={tags.some(tag => tag.toLowerCase() === suggestion.name.toLowerCase())}
                 >

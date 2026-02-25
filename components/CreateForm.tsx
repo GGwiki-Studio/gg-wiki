@@ -30,6 +30,8 @@ import { redirect } from "next/navigation"
 import { toast } from "sonner"
 import { useState, useEffect } from "react"
 import { client } from "@/api/client"
+import useAuth from "./hooks/useAuth"
+import { useRouter } from "next/navigation"
 
 
 const formSchema = z.object({
@@ -59,6 +61,11 @@ const CreateForm = () => {
   const [allMaps, setAllMaps] = useState<Map[]>([])
   const [filteredMaps, setFilteredMaps] = useState<Map[]>([])
   const [loading, setLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const router = useRouter()
+  const auth = useAuth()
+  const user = auth?.user
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -73,6 +80,21 @@ const CreateForm = () => {
   })
 
   const selectedGame = form.watch("game")
+
+  useEffect(() => {
+    if (user) {
+      setIsAuthenticated(true)
+    } else {
+      const timer = setTimeout(() => {
+        if (!user) {
+          toast.error("You must be logged in to create a strategy")
+          router.push("/login")
+        }
+      }, 1000)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [user, router])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -121,7 +143,7 @@ const CreateForm = () => {
   }
  
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    const strat = await createStrat(data)
+    const strat = await createStrat(data, user.id)
 
     if(strat) {
       redirect(`games/${data.game}/maps/${data.map}/strategies/${strat.id}`)
