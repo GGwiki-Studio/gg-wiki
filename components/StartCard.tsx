@@ -15,9 +15,11 @@ interface StartCardProps {
 }
 
 const StartCard = ({ stratId, title, author, game, thumbnailUrl, map, views, datePublished }: StartCardProps) => {
+    const gameSlug = game.toLowerCase().replaceAll(' ','-')
+    const mapSlug = map.toLowerCase().replaceAll(' ','-')
   return (
     <article className="bg-gray-950 rounded-lg p-4 shadow-lg">
-        <Link href={`/games/${stratId}`}>
+        <Link href={`/games/${gameSlug}/maps/${mapSlug}/strategies/${stratId}`}>
             <div className="flex flex-col gap-3">
                 <div className="rounded-lg overflow-hidden ">
                     <Image src={thumbnailUrl} alt={title} width={320} height={170} />
