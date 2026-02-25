@@ -45,6 +45,32 @@ const GameCardList = () => {
   //   return <div>Loading...</div>
   // }
 
+  if (loading) {
+    return (
+      <section className="pl-4">
+          <div className="w-full flex justify-between items-center">
+              <h2 className="text-3xl font-bold m-8">Explore Most Popular Games</h2>
+              <Link href="/feed">
+                  <Button className="bg-black hover:bg-gray-700 text-white font-bold py-2 px-4 rounded cursor-pointer m-8">
+                      more
+                  </Button>
+              </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 px-8">
+              {[...Array(5)].map((_, i) => (
+                  <div key={i} className="animate-pulse">
+                      <div className="bg-gray-300 h-48 rounded-t-lg"></div>
+                      <div className="bg-gray-200 h-24 rounded-b-lg p-4">
+                          <div className="h-4 bg-gray-400 rounded w-3/4 mb-2"></div>
+                          <div className="h-3 bg-gray-400 rounded w-1/2"></div>
+                      </div>
+                  </div>
+              ))}
+          </div>
+      </section>
+    )
+  }
+
   return (
     <section className="pl-4">
         <div className="w-full flex justify-between items-center">
