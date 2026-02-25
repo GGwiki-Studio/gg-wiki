@@ -91,7 +91,7 @@ const TagInput: React.FC<TagInputProps> = ({value = [], onChange, placeholder = 
         toast.error('error fetching tag exists')
       }
 
-      let newTag
+      let newTag = tagName
       if(!existingTag){
         const { data , error: createError } = await client
           .from('tags')
@@ -106,9 +106,9 @@ const TagInput: React.FC<TagInputProps> = ({value = [], onChange, placeholder = 
         if(createError){
           toast.error('error creating new tag')
         }
-        newTag = data
+        newTag = data.name
       }
-      return newTag?.name;
+      return newTag;
       
     } catch (error) {
       console.error('Error ensuring tag exists:', error)

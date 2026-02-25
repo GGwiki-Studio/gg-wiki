@@ -10,6 +10,14 @@ import {
   FormLabel,
   FormMessage,
 } from "./ui/form"
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox"
 import { Input } from "./ui/input"
 import { Button } from "./ui/button"
 import { Textarea } from "./ui/textarea"
@@ -161,51 +169,104 @@ const CreateForm = () => {
           <FormItem>
             <FormLabel>Title</FormLabel>
             <FormControl>
-              <Input placeholder="Enter strategy title" {...field} className="text-4xl" />
+              <Input placeholder="Enter strategy title" {...field} className="text-4xl" 
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }
+                }} 
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
         )} />
         <FormField name="game" control={form.control} render={({ field }) => (
-          <FormItem>
-            <FormLabel>Game</FormLabel>
-            <FormControl>
-              <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                <SelectTrigger className="w-full capitalize">
-                  <SelectValue placeholder="Select a game" />
-                </SelectTrigger>
-                <SelectContent>
-                    {games.map((game) => (
-                      <SelectItem key={game.id} value={game.slug}>
-                        {game.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )} />
+            <FormItem>
+              <FormLabel>Game</FormLabel>
+              <FormControl>
+                <Combobox
+                  items={games.map((game) => ({
+                    label: game.name,
+                    value: game.slug,
+                  }))}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                >
+                  <ComboboxInput
+                    placeholder="Select a game"
+                    className="capitalize"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        e.stopPropagation()
+                      }
+                    }}
+                  />
+
+                  <ComboboxContent>
+                    <ComboboxEmpty>No games found.</ComboboxEmpty>
+                    <ComboboxList>
+                      {(item) => (
+                        <ComboboxItem key={item.value} value={item.value}>
+                          {item.label}
+                        </ComboboxItem>
+                      )}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField name="map" control={form.control} render={({ field }) => (
-          <FormItem>
-            <FormLabel>Map</FormLabel>
-            <FormControl>
-              <Select onValueChange={field.onChange} value={field.value} disabled={!selectedGame || filteredMaps.length === 0}>
-                <SelectTrigger className="w-full capitalize">
-                  <SelectValue placeholder={!selectedGame ? "Select a game first" : filteredMaps.length === 0 ? "No maps available" : "Select a map"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredMaps.map((map) => (
-                    <SelectItem key={map.id} value={map.slug}>
-                      {map.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )} />
+            <FormItem>
+              <FormLabel>Map</FormLabel>
+              <FormControl>
+                <Combobox
+                  items={filteredMaps.map((map) => ({
+                    label: map.name,
+                    value: map.slug,
+                  }))}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  disabled={!selectedGame || filteredMaps.length === 0}
+                >
+                  <ComboboxInput
+                    placeholder={
+                      !selectedGame
+                        ? "Select a game first"
+                        : filteredMaps.length === 0
+                        ? "No maps available"
+                        : "Select a map"
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        e.stopPropagation()
+                      }
+                    }}
+                    className="capitalize"
+                    disabled={!selectedGame || filteredMaps.length === 0}
+                  />
+
+                  <ComboboxContent>
+                    <ComboboxEmpty>No maps found.</ComboboxEmpty>
+                    <ComboboxList>
+                      {(item) => (
+                        <ComboboxItem key={item.value} value={item.value}>
+                          {item.label}
+                        </ComboboxItem>
+                      )}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField name="content" control={form.control} render={({ field }) => (
           <FormItem>
             <FormLabel>Content</FormLabel>
