@@ -70,7 +70,7 @@ const StratCardList = () => {
                 const formattedData: FormattedStrat[] = data.map((strat: any) => ({
                     id: strat.id,
                     title: strat.title,
-                    thumbnailUrl: strat.thumbnail_url || 'https://picsum.photos/300/150',
+                    thumbnailUrl: strat.thumbnail_url,
                     view_count: strat.view_count || 0,
                     created_at: formatDate(strat.created_at),
                     author: strat.user?.username || 'Unknown',
