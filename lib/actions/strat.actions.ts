@@ -72,3 +72,190 @@ export const createStrat = async (formData: CreateStrat, author: any) => {
 
     return data
 }
+
+export const getStrat = async (stratId: string) => {
+    // Fetch the strategy itself (with author + game + map)
+    const { data: stratData, error: stratError } = await client
+        .from('strategies')
+        .select(`
+            id,
+            title,
+            content,
+            difficulty,
+            view_count,
+            created_at,
+            strat_url,
+            user:user_id (
+                id,
+                username
+            ),
+            game:game_id (
+                name,
+                slug
+            ),
+            map:map_id (
+                name,
+                slug
+            )
+        `)
+        .eq('id', stratId)
+        .single()
+
+    if (stratError || !stratData) {
+        throw new Error(stratError?.message || "Strategy not found")
+    }
+
+    // Fetch tags separately to avoid relationship mismatch errors if the foreign key relation isn't configured.
+    const { data: tagData, error: tagError } = await client
+        .from('strategy_tags')
+        .select(`
+            tag:tag_id (
+                name
+            )
+        `)
+        .eq('strategy_id', stratId)
+
+    if (tagError) {
+        console.warn('Failed to load strategy tags:', tagError)
+    }
+
+    // Count votes separately since the strategies table does not have votes_count
+    const { count: votesCount, error: votesCountError } = await client
+        .from('votes')
+        .select('id', { count: 'exact', head: true })
+        .eq('strategy_id', stratId)
+        .eq('vote_type', 1)
+
+    if (votesCountError) {
+        console.warn('Failed to count strategy votes:', votesCountError)
+    }
+
+    return {
+        ...stratData,
+        likes_count: votesCount ?? 0,
+        tags: Array.isArray(tagData) ? tagData.map((st: any) => st.tag?.name).filter(Boolean) : []
+    }
+}
+
+export const likeStrat = async (stratId: string, userId: string, voteType: 'upvote' | 'downvote' = 'upvote') => {
+    const voteValue = voteType === 'upvote' ? 1 : -1
+
+    // First check if user already voted on this strategy
+    const { data: existingVote } = await client
+        .from('votes')
+        .select('id, vote_type')
+        .eq('strategy_id', stratId)
+        .eq('user_id', userId)
+        .maybeSingle()
+
+    if (existingVote) {
+        if (existingVote.vote_type === voteValue) {
+            // Remove vote (unvote)
+            const { error: deleteError } = await client
+                .from('votes')
+                .delete()
+                .eq('id', existingVote.id)
+
+            if (deleteError) throw deleteError
+
+            // Recount upvotes
+            const { count: newCount, error: countError } = await client
+                .from('votes')
+                .select('id', { count: 'exact', head: true })
+                .eq('strategy_id', stratId)
+                .eq('vote_type', 1)
+
+            if (countError) throw countError
+
+            return { voted: false, voteType: null, votesCount: newCount ?? 0 }
+        } else {
+            // Change vote type (upvote to downvote or vice versa)
+            const { error: updateError } = await client
+                .from('votes')
+                .update({ vote_type: voteValue })
+                .eq('id', existingVote.id)
+
+            if (updateError) throw updateError
+
+            // Recount upvotes
+            const { count: newCount, error: countError } = await client
+                .from('votes')
+                .select('id', { count: 'exact', head: true })
+                .eq('strategy_id', stratId)
+                .eq('vote_type', 1)
+
+            if (countError) throw countError
+
+            return { voted: true, voteType, votesCount: newCount ?? 0 }
+        }
+    } else {
+        // Add new vote
+        const { error: insertError } = await client
+            .from('votes')
+            .insert({
+                strategy_id: stratId,
+                user_id: userId,
+                vote_type: voteValue
+            })
+
+        if (insertError) throw insertError
+
+        // Recount upvotes
+        const { count: newCount, error: countError } = await client
+            .from('votes')
+            .select('id', { count: 'exact', head: true })
+            .eq('strategy_id', stratId)
+            .eq('vote_type', 1)
+
+        if (countError) throw countError
+
+        return { voted: true, voteType, votesCount: newCount ?? 0 }
+    }
+}
+
+export const getComments = async (stratId: string) => {
+    const { data, error } = await client
+        .from('comments')
+        .select(`
+            id,
+            content,
+            created_at,
+            parent_id,
+            user:user_id (
+                username
+            )
+        `)
+        .eq('strategy_id', stratId)
+        .order('created_at', { ascending: true })
+
+    if (error) throw error
+
+    return data || []
+}
+
+export const addComment = async (stratId: string, userId: string, content: string) => {
+    const { data, error } = await client
+        .from('comments')
+        .insert({
+            strategy_id: stratId,
+            user_id: userId,
+            content,
+            parent_id: null
+        })
+        .select(`
+            id,
+            content,
+            created_at,
+            parent_id,
+            user:user_id (
+                username
+            )
+        `)
+        .single()
+
+    if (error || !data) {
+        throw new Error(error?.message || "Failed to add comment")
+    }
+
+    return data
+}
