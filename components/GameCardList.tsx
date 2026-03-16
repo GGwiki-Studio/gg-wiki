@@ -3,12 +3,7 @@ import Link from "next/link"
 import GameCard from "./GameCard"
 import{ client } from "@/api/client"
 
-interface Game{
-  slug: string;
-  name: string;
-  cover_image_url: string;
-  member_count: number;
-}
+
 
 import { Button } from "./ui/button"
 import { useEffect, useState } from "react";
@@ -89,7 +84,7 @@ const GameCardList = () => {
               key={game.slug}
               gameSlug={game.slug}
               name={game.name}
-              thumbnailUrl="https://picsum.photos/320/170"
+              thumbnailUrl={game.cover_image_url}
               members={game.member_count}
             />
           ))}
