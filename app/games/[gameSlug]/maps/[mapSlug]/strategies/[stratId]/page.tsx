@@ -213,7 +213,7 @@ const StrategyPage = () => {
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
-                            <Badge variant="secondary" className="flex items-center gap-2">
+                            <Badge className="bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600 flex items-center gap-2">
                                 <Trophy size={14} />
                                 {strategy.difficulty}
                             </Badge>
@@ -222,15 +222,15 @@ const StrategyPage = () => {
 
                     {/* Game and Map info */}
                     <div className="flex gap-2 mb-4">
-                        <Badge variant="outline">{strategy.game.name}</Badge>
-                        <Badge variant="outline">{strategy.map.name}</Badge>
+                        <Badge className="bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600">{strategy.game.name}</Badge>
+                        <Badge className="bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600">{strategy.map.name}</Badge>
                     </div>
 
                     {/* Tags */}
                     {strategy.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-6">
                             {strategy.tags.map((tag, index) => (
-                                <Badge key={index} variant="secondary">{tag}</Badge>
+                                <Badge key={index} className="bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600">{tag}</Badge>
                             ))}
                         </div>
                     )}
@@ -265,15 +265,21 @@ const StrategyPage = () => {
                     <div className="flex items-center gap-2">
                         <Button
                             onClick={() => handleVote('upvote')}
-                            variant={voteType === 'upvote' ? "default" : "outline"}
-                            className={`flex items-center gap-2 ${voteType === 'upvote' ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                            className={`flex items-center gap-2 ${
+                                voteType === 'upvote'
+                                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                                    : 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600'
+                            }`}
                         >
                             <ThumbsUp size={18} className={voteType === 'upvote' ? 'fill-current' : ''} />
                         </Button>
                         <Button
                             onClick={() => handleVote('downvote')}
-                            variant={voteType === 'downvote' ? "default" : "outline"}
-                            className={`flex items-center gap-2 ${voteType === 'downvote' ? 'bg-red-600 hover:bg-red-700' : ''}`}
+                            className={`flex items-center gap-2 ${
+                                voteType === 'downvote'
+                                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                                    : 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600'
+                            }`}
                         >
                             <ThumbsDown size={18} className={voteType === 'downvote' ? 'fill-current' : ''} />
                         </Button>
