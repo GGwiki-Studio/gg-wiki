@@ -132,6 +132,9 @@ export const getStrat = async (stratId: string) => {
 
     return {
         ...stratData,
+        user: Array.isArray(stratData.user) ? stratData.user[0] : stratData.user,
+        game: Array.isArray(stratData.game) ? stratData.game[0] : stratData.game,
+        map: Array.isArray(stratData.map) ? stratData.map[0] : stratData.map,
         likes_count: votesCount ?? 0,
         tags: Array.isArray(tagData) ? tagData.map((st: any) => st.tag?.name).filter(Boolean) : []
     }
@@ -230,7 +233,11 @@ export const getComments = async (stratId: string) => {
 
     if (error) throw error
 
-    return data || []
+    // Fix user relationship arrays
+    return (data || []).map(comment => ({
+        ...comment,
+        user: Array.isArray(comment.user) ? comment.user[0] : comment.user
+    }))
 }
 
 export const addComment = async (stratId: string, userId: string, content: string) => {
@@ -257,5 +264,8 @@ export const addComment = async (stratId: string, userId: string, content: strin
         throw new Error(error?.message || "Failed to add comment")
     }
 
-    return data
+    return {
+        ...data,
+        user: Array.isArray(data.user) ? data.user[0] : data.user
+    }
 }
