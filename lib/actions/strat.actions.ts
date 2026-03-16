@@ -140,6 +140,31 @@ export const getStrat = async (stratId: string) => {
     }
 }
 
+export const incrementViewCount = async (stratId: string) => {
+    const { error } = await client.rpc('increment_view_count', { strategy_id: stratId })
+
+    if (error) {
+        console.warn('Failed to increment view count:', error)
+        // Fallback: try to increment manually
+        const { data: currentStrat } = await client
+            .from('strategies')
+            .select('view_count')
+            .eq('id', stratId)
+            .single()
+
+        if (currentStrat) {
+            const { error: updateError } = await client
+                .from('strategies')
+                .update({ view_count: (currentStrat.view_count || 0) + 1 })
+                .eq('id', stratId)
+
+            if (updateError) {
+                console.error('Failed to increment view count manually:', updateError)
+            }
+        }
+    }
+}
+
 export const likeStrat = async (stratId: string, userId: string, voteType: 'upvote' | 'downvote' = 'upvote') => {
     const voteValue = voteType === 'upvote' ? 1 : -1
 

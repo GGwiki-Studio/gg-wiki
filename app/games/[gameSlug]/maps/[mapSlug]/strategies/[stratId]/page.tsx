@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Heart, MessageCircle, Eye, Calendar, User, Trophy, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { toast } from 'sonner'
 import useAuth from '@/components/hooks/useAuth'
-import { getStrat, likeStrat, getComments, addComment } from '@/lib/actions/strat.actions'
+import { getStrat, likeStrat, getComments, addComment, incrementViewCount } from '@/lib/actions/strat.actions'
 
 interface Strategy {
     id: string
@@ -65,6 +65,11 @@ const StrategyPage = () => {
                 const stratData = await getStrat(stratId)
                 setStrategy(stratData)
                 setVotesCount(stratData.likes_count || 0)
+
+                // Increment view count when strategy is loaded
+                await incrementViewCount(stratId)
+                // Update the strategy state with incremented view count
+                setStrategy(prev => prev ? { ...prev, view_count: (prev.view_count || 0) + 1 } : null)
 
                 // Check if user already voted on this strategy
                 if (user) {
