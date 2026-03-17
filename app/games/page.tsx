@@ -1,6 +1,7 @@
 'use client'
 
 import GameCard from "@/components/GameCard";
+import GenreFilter from "@/components/GenreFilter";
 import { getAllGames } from "@/lib/actions/game.actions";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -55,7 +56,9 @@ const Page = () => {
     <main>
       <section className="pl-4 flex justify-between gap-4 max-sm:flex-col">
         <h1 className="text-3xl font-bold m-8">Game Communities</h1>
-        <div className="flex gap-4 py-2 px-4 m-8">Filters</div>
+        <div className="flex gap-4 py-2 px-4 m-8">
+          <GenreFilter />
+        </div>
       </section>
       <section className="flex-wrap gap-4 w-full max-md:justify-center justify-between grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 px-8">
         {games?.map((game) => (
