@@ -1,23 +1,15 @@
 'use client'
-import Builder from "@/components/Builder"
-import CreateForm from "@/components/CreateForm"
 
-const page = () => {
+import Builder from '@/components/builder/Builder'
+
+const Page = () => {
   return (
-    <main>
-      <div className="px-4 md:px-10 w-full">
-        <article className="mt-12 p-4 border border-gray-300 rounded-2xl w-full gap-4 flex bg-[#161616] mx-auto">
-          <section className="w-2/3">
-            <Builder />
-          </section>
-          <section className="w-1/3">
-            <h1 className="text-3xl font-bold mb-2">Strategy Builder</h1>
-            <CreateForm />
-          </section>
-        </article>
+    <main className="w-full px-4 py-6 md:px-8">
+      <div className="mx-auto w-full max-w-[1900px]">
+        <Builder />
       </div>
     </main>
   )
 }
 
-export default page
+export default Page
