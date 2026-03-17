@@ -13,16 +13,12 @@ pnpm dev
 # or
 bun dev
 ```
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-Make sure to upload konva react package. It is open source, MIT licensed which is used for Create Strat Builder
-```bash
-npm install konva react-konva
-```
 
 ## Learn More
 

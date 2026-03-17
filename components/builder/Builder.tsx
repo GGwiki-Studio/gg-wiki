@@ -697,6 +697,7 @@ const Builder = () => {
       case 'rectangle':
         return (
           <Rect
+          key={object.id}
             {...commonProps}
             width={object.canvas.width}
             height={object.canvas.height}
