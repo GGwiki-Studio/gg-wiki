@@ -17,8 +17,9 @@ const Page = () => {
       setLoading(true)
       const genre = searchParams.get('genre') || ''
       const topic = searchParams.get('topic') || ''
+      const limit = 0
       try{
-        const fetchedGames = await getAllGames({genre, topic})
+        const fetchedGames = await getAllGames({limit, genre, topic})
         setGames(fetchedGames)
       } catch(error){
         console.error('Failed to fetch data:', error)
