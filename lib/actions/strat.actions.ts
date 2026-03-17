@@ -1,5 +1,6 @@
 'use client'
 import { client } from "@/api/client"
+import { toast } from "sonner";
 
 
 interface CreateStrat {
@@ -9,6 +10,24 @@ interface CreateStrat {
     tags: string[];
     difficulty: "Easy" | "Medium" | "Hard";
     content: string;
+}
+
+interface GetAllStratsParams {
+    limit: number
+    map: string
+    topic: string | string[]
+    gameSlug: string
+}
+
+interface FormattedStrat {
+    id: string
+    title: string
+    thumbnailUrl: string
+    view_count: number
+    created_at: string
+    author: string
+    gameName: string
+    mapName: string
 }
 
 export const createStrat = async (formData: CreateStrat, author: any) => {
@@ -292,5 +311,86 @@ export const addComment = async (stratId: string, userId: string, content: strin
     return {
         ...data,
         user: Array.isArray(data.user) ? data.user[0] : data.user
+    }
+}
+
+export const getAllStrats = async ({ limit, map, topic, gameSlug }: GetAllStratsParams): Promise<FormattedStrat[]> => {
+    try {
+        const { data: gameData, error: gameError } = await client
+            .from('games')
+            .select('id')
+            .eq('slug', gameSlug)
+            .single()
+        if (gameError || !gameData) return []
+
+        const gameId = gameData.id
+
+        let mapId: string | null = null
+        if (map && map !== 'all') {
+            const { data: mapData } = await client
+                .from('maps')
+                .select('id')
+                .eq('slug', map)
+                .single()
+            if (mapData) mapId = mapData.id
+        }
+
+        let query = client
+            .from('strategies')
+            .select(`
+                id,
+                title,
+                thumbnail_url,
+                view_count,
+                created_at,
+                user:user_id ( username ),
+                game:game_id ( name ),
+                map:map_id ( name )
+            `)
+            .eq('game_id', gameId)
+            .order('view_count', { ascending: false }) 
+
+        if (mapId) {
+            query = query.eq('map_id', mapId)
+        }
+
+        if (topic) {
+            const topicStr = Array.isArray(topic) ? topic.join(',') : topic
+            query = query.or(`title.ilike.%${topicStr}%,content.ilike.%${topicStr}%`)
+        }
+
+        if (limit && limit !== 0) {
+            query = query.limit(limit)
+        }
+
+        const { data, error } = await query
+        if (error || !data) return []
+
+        const formatDate = (timestamp: string) => {
+            const date = new Date(timestamp)
+            const day = date.getDate().toString().padStart(2, '0')
+            const month = (date.getMonth() + 1).toString().padStart(2, '0')
+            const year = date.getFullYear()
+            const hours = date.getHours().toString().padStart(2, '0')
+            const minutes = date.getMinutes().toString().padStart(2, '0')
+            return `${day}/${month}/${year} ${hours}:${minutes}`
+        }
+
+        const formattedData: FormattedStrat[] = data.map((strat: any) => ({
+            id: strat.id,
+            title: strat.title,
+            thumbnailUrl: strat.thumbnail_url,
+            view_count: strat.view_count || 0,
+            created_at: formatDate(strat.created_at),
+            author: Array.isArray(strat.user) ? strat.user[0]?.username : strat.user?.username || 'Unknown',
+            gameName: Array.isArray(strat.game) ? strat.game[0]?.name : strat.game?.name || 'Unknown',
+            mapName: Array.isArray(strat.map) ? strat.map[0]?.name : strat.map?.name || 'Unknown',
+        }))
+
+        return formattedData
+    } catch (err) {
+        console.error('Error fetching strategies:', err)
+        toast.error("Fail to fetch data. Please try again later")
+        return []
     }
 }
