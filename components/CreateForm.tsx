@@ -40,7 +40,7 @@ import { useState, useEffect } from "react"
 import { client } from "@/api/client"
 import useAuth from "./hooks/useAuth"
 import { useRouter } from "next/navigation"
-
+import StrategyMediaUpload from './StrategyMediaUpload'
 
 const formSchema = z.object({
   title: z.string().min(1, { message: "Title is required" }),
@@ -73,7 +73,7 @@ const CreateForm = () => {
   const router = useRouter()
   const auth = useAuth()
   const user = auth?.user
-
+  const [createdStrategyId, setCreatedStrategyId] = useState<string | null>(null)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -150,17 +150,21 @@ const CreateForm = () => {
     return <div>Loading...</div>
   }
  
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    const strat = await createStrat(data, user.id)
+ const onSubmit = async (data: z.infer<typeof formSchema>) => {
+   try {
+     const strat = await createStrat(data, user.id)
 
-    if(strat) {
-      redirect(`games/${data.game}/maps/${data.map}/strategies/${strat.id}`)
-    } else {
-      console.error("Failed to create strat")
-      toast.error("Failed to create strat. Please try again.")
-    }
-    form.reset()
-  }
+     if(strat) {
+       setCreatedStrategyId(strat.id)
+       toast.success("Strategy created! Now upload media (optional).")
+     } else {
+       throw new Error("Failed to create strategy")
+     }
+   } catch (error) {
+     console.error("Failed to create strat:", error)
+     toast.error("Failed to create strat. Please try again.")
+   }
+ }
   
   return (
     <Form {...form}>
@@ -325,13 +329,41 @@ const CreateForm = () => {
             <FormMessage />
           </FormItem>
         )} />
+        {createdStrategyId && (
+          <StrategyMediaUpload
+          strategyId={createdStrategyId}
+          userId={user.id}
+          />
+        )}
         <div className="flex w-full justify-between items-center">
-          <Button type="button" className="bg-gray-700 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded cursor-pointer" onClick={() => form.reset()}>
-            Reset
+        <Button
+        type="button"
+        className="bg-gray-700 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded cursor-pointer"
+        onClick={() => {
+          form.reset()
+            setCreatedStrategyId(null)
+        }}
+        >
+        Reset
+        </Button>
+        <div className="flex gap-4">
+        <Button
+        type="submit"
+        className="bg-gray-700 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded cursor-pointer"
+        disabled={createdStrategyId !== null}
+        >
+        {createdStrategyId ? 'Strategy Created ✓' : 'Create Strategy'}
+        </Button>
+        {createdStrategyId && (
+          <Button
+          type="button"
+          onClick={() => router.push(`/games/${form.getValues('game')}/maps/${form.getValues('map')}/strategies/${createdStrategyId}`)}
+          className="bg-green-700 hover:bg-green-500 text-white font-bold py-2 px-4 rounded cursor-pointer"
+          >
+          View Strategy
           </Button>
-          <Button type="submit" className="bg-gray-700 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded cursor-pointer">
-            Create Strategy
-          </Button>
+        )}
+        </div>
         </div>
       </form>
     </Form>
