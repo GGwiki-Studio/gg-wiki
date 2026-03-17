@@ -49,8 +49,8 @@ export const createStrat = async (formData: CreateStrat, author: any) => {
         })
         .select()
         .single()
-    
-    
+
+
     if (error || !data) {
         throw new Error(error?.message || "Failed to create strat")
     }
@@ -293,4 +293,20 @@ export const addComment = async (stratId: string, userId: string, content: strin
         ...data,
         user: Array.isArray(data.user) ? data.user[0] : data.user
     }
+}
+export const updateStratMedia = async (stratId: string, mediaUrl: string, userId: string) => {
+    const { error } = await client
+    .from("strategies")
+    .update({
+        strat_url: mediaUrl,
+        updated_at: new Date().toISOString()
+    })
+    .eq('id', stratId)
+    .eq('user_id', userId)
+
+    if (error) {
+        throw new Error(error.message || "Failed to update strategy media")
+    }
+
+    return { success: true }
 }
