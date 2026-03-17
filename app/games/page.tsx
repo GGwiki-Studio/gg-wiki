@@ -15,11 +15,10 @@ const Page = () => {
   useEffect(() => {
     const fetchGames = async () => {
       setLoading(true)
-      const name = searchParams.get('name') || ''
       const genre = searchParams.get('genre') || ''
-      const description = searchParams.get('description') || ''
+      const topic = searchParams.get('topic') || ''
       try{
-        const fetchedGames = await getAllGames({name, genre, description})
+        const fetchedGames = await getAllGames({genre, topic})
         setGames(fetchedGames)
       } catch(error){
         console.error('Failed to fetch data:', error)
@@ -30,7 +29,7 @@ const Page = () => {
     }
 
     fetchGames()
-  }, [searchParams]) // Re-fetch when search params change
+  }, [searchParams])
 
   if (loading) return (
     <main>

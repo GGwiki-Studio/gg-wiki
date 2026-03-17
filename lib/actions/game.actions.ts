@@ -1,25 +1,35 @@
 'use client'
 import { client } from "@/api/client"
-import { toast } from "sonner";
 
 interface GetAllGames {
-    name: string | string[];
     genre: string | string[];
-    description: string | string[];
+    topic: string | string[];
 }
 
-export const getAllGames = async ({name, genre, description}: GetAllGames) => {
+export const getAllGames = async ({genre, topic}: GetAllGames) => {
     let query = client.from('games').select();
 
-    if(name){
-        query.ilike('name', `%${name}%`)
+    if(genre && topic){
+        query = query.ilike('genre', `%${genre}%`)
+        .or(`name.ilike.%${topic}%,description.ilike.%${topic}%`)
     }
-    if(genre){
-        query.ilike('genre', `%${genre}%`)
+    else if(genre){
+        query = query.ilike('genre', `%${genre}%`)
     }
-    if(description){
-        query.or(`description.ilike.%${description}%`)
+    else if(topic){
+        query = query.or(`name.ilike.%${topic}%,description.ilike.%${topic}%`)
     }
+
+
+    // if(name){
+    //     query.ilike('name', `%${name}%`)
+    // }
+    // if(genre){
+    //     query.ilike('genre', `%${genre}%`)
+    // }
+    // if(description){
+    //     query.or(`description.ilike.%${description}%`)
+    // }
 
     const {data: games, error} = await query;
 
