@@ -7,17 +7,6 @@ import { useSearchParams, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-interface Strat{
-  id: string;
-  title: string;
-  thumbnailUrl: string;
-  view_count: number;
-  created_at: string;
-  author: string;
-  gameName: string;
-  mapName: string;
-}
-
 const Page = () => {
   const searchParams = useSearchParams()
   const pathname = usePathname()
@@ -57,7 +46,6 @@ const Page = () => {
     <main>
       <section className="pl-4 flex justify-between gap-4 max-sm:flex-col">
         <h1 className="text-3xl font-bold m-8">Game Strategies</h1>
-        <div className="flex gap-4 py-2 px-4 m-8">Filters</div>
       </section>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 px-8">
         {[...Array(5)].map((_, i) => (
