@@ -10,9 +10,9 @@ import {
 } from "./ui/select"
 
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 
-const GenreFilter = () => {
+function PageContent(){
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -65,6 +65,14 @@ const GenreFilter = () => {
         </SelectGroup>
       </SelectContent>
     </Select>
+  )
+}
+
+const GenreFilter = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PageContent />
+    </Suspense>
   )
 }
 

@@ -9,11 +9,10 @@ import { getAllGames } from "@/lib/actions/game.actions";
 import { getAllStrats } from "@/lib/actions/strat.actions";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-const page = () => {
-
+function PageContent(){
   const searchParams = useSearchParams()
   const [isSearch, setisSearch] = useState(false)
   const [games, setGames] = useState<Game[]>([])
@@ -187,6 +186,14 @@ const page = () => {
         <p className="text-white">&copy; 2026 GGWIKI. All rights reserved.</p>
       </div>
     </main>
+  )
+}
+
+const page = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PageContent />
+    </Suspense>
   )
 }
 

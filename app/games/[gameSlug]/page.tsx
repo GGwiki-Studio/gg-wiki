@@ -4,10 +4,10 @@ import MapFilter from "@/components/MapFilter";
 import StartCard from "@/components/StartCard";
 import { getAllStrats } from "@/lib/actions/strat.actions";
 import { useSearchParams, usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-const Page = () => {
+function PageContent(){
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const [strats, setStrats] = useState<Strat[]>([])
@@ -27,15 +27,15 @@ const Page = () => {
       const map = searchParams.get('map') || ''
       const topic = searchParams.get('topic') || ''
       const limit = 0
-      
-      try{
-        const fetchedStrats = await getAllStrats({limit, map, topic, gameSlug})
+
+      try {
+        const fetchedStrats = await getAllStrats({ limit, map, topic, gameSlug })
         setStrats(fetchedStrats)
-      } catch(error){
+      } catch (error) {
         console.error('Failed to fetch data:', error)
         toast.error('Failed to load data. Please try again later.')
       }
-      
+
       setLoading(false)
     }
 
@@ -91,6 +91,16 @@ const Page = () => {
       </section>
     </main>
   )
+}
+
+const Page = () => {
+
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PageContent />
+    </Suspense>
+  )
+  
 }
 
 export default Page

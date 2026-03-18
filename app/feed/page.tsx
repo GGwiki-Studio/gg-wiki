@@ -4,7 +4,7 @@ import MapFilter from "@/components/MapFilter";
 import StartCard from "@/components/StartCard";
 import { getAllStrats } from "@/lib/actions/strat.actions";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface Strat{
@@ -18,7 +18,7 @@ interface Strat{
   mapName: string;
 }
 
-const Page = () => {
+function PageContent(){
   const searchParams = useSearchParams()
   const [strats, setStrats] = useState<Strat[]>([])
   const [loading, setLoading] = useState(true)
@@ -98,6 +98,14 @@ const Page = () => {
         )}
       </section>
     </main>
+  )
+}
+
+const Page = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PageContent />
+    </Suspense>
   )
 }
 

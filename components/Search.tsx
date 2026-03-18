@@ -2,9 +2,9 @@
 
 import Image from "next/image"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, Suspense } from "react"
 
-const Search = () => {
+function PageContent(){
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -122,6 +122,14 @@ const Search = () => {
         </button>
       )}
     </div>
+  )
+}
+
+const Search = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PageContent />
+    </Suspense>
   )
 }
 

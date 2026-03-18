@@ -4,10 +4,10 @@ import GameCard from "@/components/GameCard";
 import GenreFilter from "@/components/GenreFilter";
 import { getAllGames } from "@/lib/actions/game.actions";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-const Page = () => {
+function PageContent(){
   const searchParams = useSearchParams()
   const [games, setGames] = useState<Game[]>([])
   const [loading, setLoading] = useState(true)
@@ -72,6 +72,14 @@ const Page = () => {
         ))}
       </section>
     </main>
+  )
+}
+
+const Page = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PageContent />
+    </Suspense>
   )
 }
 

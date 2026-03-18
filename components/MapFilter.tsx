@@ -12,7 +12,7 @@ import {
 import { client } from "@/api/client"
 
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { toast } from "sonner"
 
 interface Map {
@@ -28,7 +28,7 @@ interface Game {
   slug: string
 }
 
-const MapFilter = () => {
+function PageContent(){
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -134,6 +134,14 @@ const MapFilter = () => {
         </SelectGroup>
       </SelectContent>
     </Select>
+  )
+}
+
+const MapFilter = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PageContent />
+    </Suspense>
   )
 }
 
