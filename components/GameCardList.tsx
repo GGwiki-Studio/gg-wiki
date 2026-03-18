@@ -3,12 +3,7 @@ import Link from "next/link"
 import GameCard from "./GameCard"
 import{ client } from "@/api/client"
 
-interface Game{
-  slug: string;
-  name: string;
-  cover_image_url: string;
-  member_count: number;
-}
+
 
 import { Button } from "./ui/button"
 import { useEffect, useState } from "react";
@@ -50,7 +45,7 @@ const GameCardList = () => {
       <section className="pl-4">
           <div className="w-full flex justify-between items-center">
               <h2 className="text-3xl font-bold m-8">Explore Most Popular Games</h2>
-              <Link href="/feed">
+              <Link href="/games">
                   <Button className="bg-black hover:bg-gray-700 text-white font-bold py-2 px-4 rounded cursor-pointer m-8">
                       more
                   </Button>
@@ -82,14 +77,14 @@ const GameCardList = () => {
             </Link>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 px-8">
-          {!loading && data.length === 0 && <p>No games found.</p>}
+          {!loading && data.length === 0 && <p className="col-span-5 text-center text-gray-500 py-8">No games found.</p>}
 
           {!loading && data.map((game) => (
             <GameCard
               key={game.slug}
               gameSlug={game.slug}
               name={game.name}
-              thumbnailUrl="https://picsum.photos/320/170"
+              thumbnailUrl={game.cover_image_url}
               members={game.member_count}
             />
           ))}

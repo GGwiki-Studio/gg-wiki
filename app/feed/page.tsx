@@ -3,35 +3,45 @@
 import MapFilter from "@/components/MapFilter";
 import StartCard from "@/components/StartCard";
 import { getAllStrats } from "@/lib/actions/strat.actions";
-import { useSearchParams, usePathname } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+interface Strat{
+  id: string;
+  title: string;
+  thumbnailUrl: string;
+  view_count: number;
+  created_at: string;
+  author: string;
+  gameName: string;
+  mapName: string;
+}
+
 function PageContent(){
   const searchParams = useSearchParams()
-  const pathname = usePathname()
   const [strats, setStrats] = useState<Strat[]>([])
   const [loading, setLoading] = useState(true)
 
-  const pathSegments = pathname.split('/')
-  const gameSlug = pathSegments[2]
-
   useEffect(() => {
     const fetchStrats = async () => {
-      if (!gameSlug) {
-        console.error('No game slug found in URL')
-        return
-      }
-
       setLoading(true)
-      const map = searchParams.get('map') || ''
-      const topic = searchParams.get('topic') || ''
+      const map = '' // optional map filter, can be extended later
       const limit = 0
 
+      // Only use topic if user actually searched
+      const topicParam = searchParams.get('topic')
+      const topic = topicParam && topicParam.trim() !== '' ? topicParam : undefined
+      
       try {
-        const fetchedStrats = await getAllStrats({ limit, map, topic, gameSlug })
+        const fetchedStrats = await getAllStrats({
+          limit,
+          map,
+          topic: topic || '', // getAllStrats expects string, empty = no filter
+          gameSlug: '' // empty means fetch all games
+        })
         setStrats(fetchedStrats)
-      } catch (error) {
+      } catch(error){
         console.error('Failed to fetch data:', error)
         toast.error('Failed to load data. Please try again later.')
       }
@@ -40,12 +50,13 @@ function PageContent(){
     }
 
     fetchStrats()
-  }, [searchParams, gameSlug])
+  }, [searchParams])
 
   if (loading) return (
     <main>
       <section className="pl-4 flex justify-between gap-4 max-sm:flex-col">
         <h1 className="text-3xl font-bold m-8">Game Strategies</h1>
+        <div className="flex gap-4 py-2 px-4 m-8">Filters</div>
       </section>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 px-8">
         {[...Array(5)].map((_, i) => (
@@ -64,10 +75,7 @@ function PageContent(){
   return (
     <main>
       <section className="pl-4 flex justify-between gap-4 max-sm:flex-col">
-        <h1 className="text-3xl font-bold m-8">Game Strategies</h1>
-        <div className="flex gap-4 py-2 px-4 m-8">
-          <MapFilter />
-        </div>
+        <h1 className="text-3xl font-bold m-8">Strategies</h1>
       </section>
       <section className="flex-wrap gap-4 w-full max-md:justify-center justify-between grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 px-8">
         {strats?.map((strat) => (
@@ -85,22 +93,23 @@ function PageContent(){
         ))}
         {strats?.length === 0 && (
           <div className="col-span-full text-center py-8 text-gray-500">
-            No strategies found for this game and map combination.
+            No strategies found.
           </div>
         )}
       </section>
+      <div className="text-center py-8 text-gray-500">
+        You've reached the end!
+      </div>
     </main>
   )
 }
 
 const Page = () => {
-
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <PageContent />
     </Suspense>
   )
-  
 }
 
 export default Page
