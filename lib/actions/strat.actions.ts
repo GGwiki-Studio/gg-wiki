@@ -318,21 +318,32 @@ export const getAllStrats = async ({ limit = 0, map, topic, gameSlug }: GetAllSt
   try {
     let gameId: string | undefined
     if (gameSlug) {
-      const { data: gameData } = await client.from('games').select('id').eq('slug', gameSlug).single()
+      const { data: gameData } = await client
+        .from('games')
+        .select('id')
+        .eq('slug', gameSlug)
+        .single()
+
       if (gameData) gameId = gameData.id
     }
 
     let mapId: string | undefined
     if (map && map !== 'all') {
-      const { data: mapData } = await client.from('maps').select('id').eq('slug', map).single()
+      const { data: mapData } = await client
+        .from('maps')
+        .select('id')
+        .eq('slug', map)
+        .single()
+
       if (mapData) mapId = mapData.id
     }
+
     const topicString =
-        typeof topic === 'string'
-            ? topic
-            : Array.isArray(topic)
-            ? topic.join(' ')
-            : ''
+      typeof topic === 'string'
+        ? topic
+        : Array.isArray(topic)
+        ? topic.join(' ')
+        : ''
 
     const searchWords = topicString.trim().split(/\s+/).filter(Boolean)
 
@@ -341,17 +352,48 @@ export const getAllStrats = async ({ limit = 0, map, topic, gameSlug }: GetAllSt
       const { data: matchingTags } = await client
         .from('tags')
         .select('id')
-        .or(searchWords.map(w => `name.ilike.%${w}%`).join(','))
-      
+        .or(searchWords.map((w: string) => `name.ilike.%${w}%`).join(','))
+
       if (matchingTags?.length) {
         const tagIds = matchingTags.map(t => t.id)
+
         const { data: stratTags } = await client
           .from('strategy_tags')
           .select('strategy_id')
           .in('tag_id', tagIds)
-        
+
         strategyIdsByTag = stratTags?.map(st => st.strategy_id) || []
       }
+    }
+
+    let gameIdsBySearch: string[] = []
+    if (searchWords.length) {
+      const { data: matchingGames } = await client
+        .from('games')
+        .select('id')
+        .or(searchWords.map((w: string) => `name.ilike.%${w}%`).join(','))
+
+      gameIdsBySearch = matchingGames?.map(g => g.id) || []
+    }
+
+    let mapIdsBySearch: string[] = []
+    if (searchWords.length) {
+      const { data: matchingMaps } = await client
+        .from('maps')
+        .select('id')
+        .or(searchWords.map((w: string) => `name.ilike.%${w}%`).join(','))
+
+      mapIdsBySearch = matchingMaps?.map(m => m.id) || []
+    }
+
+    let userIdsBySearch: string[] = []
+    if (searchWords.length) {
+      const { data: matchingUsers } = await client
+        .from('profiles')
+        .select('id')
+        .or(searchWords.map((w: string) => `username.ilike.%${w}%`).join(','))
+
+    userIdsBySearch = matchingUsers?.map(u => u.id) || []
     }
 
     let query = client
@@ -372,19 +414,30 @@ export const getAllStrats = async ({ limit = 0, map, topic, gameSlug }: GetAllSt
     if (mapId) query = query.eq('map_id', mapId)
 
     if (searchWords.length) {
+      const filters: string[] = []
 
-    const filters: string[] = []
-
-    searchWords.forEach(w => {
+      searchWords.forEach((w: string) => {
         filters.push(`title.ilike.%${w}%`)
         filters.push(`content.ilike.%${w}%`)
-        })
+      })
 
-        if (strategyIdsByTag.length) {
+      if (strategyIdsByTag.length) {
         filters.push(`id.in.(${strategyIdsByTag.join(',')})`)
-        }
+      }
 
-        query = query.or(filters.join(','))
+      if (gameIdsBySearch.length) {
+        filters.push(`game_id.in.(${gameIdsBySearch.join(',')})`)
+      }
+
+      if (mapIdsBySearch.length) {
+        filters.push(`map_id.in.(${mapIdsBySearch.join(',')})`)
+      }
+
+      if (userIdsBySearch.length) {
+        filters.push(`user_id.in.(${userIdsBySearch.join(',')})`)
+      }
+
+      query = query.or(filters.join(','))
     }
 
     if (limit && limit > 0) query = query.limit(limit)
@@ -408,9 +461,18 @@ export const getAllStrats = async ({ limit = 0, map, topic, gameSlug }: GetAllSt
       thumbnailUrl: strat.thumbnail_url,
       view_count: strat.view_count || 0,
       created_at: formatDate(strat.created_at),
-      author: Array.isArray(strat.user) ? strat.user[0]?.username : strat.user?.username || 'Unknown',
-      gameName: Array.isArray(strat.game) ? strat.game[0]?.name : strat.game?.name || 'Unknown',
-      mapName: Array.isArray(strat.map) ? strat.map[0]?.name : strat.map?.name || 'Unknown',
+      author:
+        Array.isArray(strat.user)
+          ? strat.user[0]?.username
+          : strat.user?.username || 'Unknown',
+      gameName:
+        Array.isArray(strat.game)
+          ? strat.game[0]?.name
+          : strat.game?.name || 'Unknown',
+      mapName:
+        Array.isArray(strat.map)
+          ? strat.map[0]?.name
+          : strat.map?.name || 'Unknown'
     }))
   } catch (err) {
     console.error('Error fetching strategies:', err)
