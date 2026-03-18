@@ -97,6 +97,9 @@ function PageContent(){
           </div>
         )}
       </section>
+      <div className="text-center py-8 text-gray-500">
+        You've reached the end!
+      </div>
     </main>
   )
 }
