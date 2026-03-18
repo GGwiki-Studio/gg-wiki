@@ -77,7 +77,7 @@ const GameCardList = () => {
             </Link>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 px-8">
-          {!loading && data.length === 0 && <p>No games found.</p>}
+          {!loading && data.length === 0 && <p className="col-span-5 text-center text-gray-500 py-8">No games found.</p>}
 
           {!loading && data.map((game) => (
             <GameCard
