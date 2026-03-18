@@ -45,7 +45,7 @@ const GameCardList = () => {
       <section className="pl-4">
           <div className="w-full flex justify-between items-center">
               <h2 className="text-3xl font-bold m-8">Explore Most Popular Games</h2>
-              <Link href="/feed">
+              <Link href="/games">
                   <Button className="bg-black hover:bg-gray-700 text-white font-bold py-2 px-4 rounded cursor-pointer m-8">
                       more
                   </Button>
