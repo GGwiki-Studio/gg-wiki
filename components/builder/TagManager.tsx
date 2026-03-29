@@ -1,10 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Plus, Tag, Trash2 } from 'lucide-react'
-
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Plus, Trash2 } from 'lucide-react'
 
 import { TagManagerProps } from './builder.types'
 
@@ -19,16 +16,12 @@ const DEFAULT_TAG_COLORS = [
   '#ec4899',
 ]
 
-const TagManager = ({
-  tags,
-  onCreateTag,
-  onDeleteTag,
-}: TagManagerProps) => {
+const TagManager = ({ tags, onCreateTag, onDeleteTag }: TagManagerProps) => {
   const [tagName, setTagName] = useState('')
   const [selectedColor, setSelectedColor] = useState(DEFAULT_TAG_COLORS[1])
 
   const normalizedNames = useMemo(
-    () => tags.map((tag) => tag.name.trim().toLowerCase()),
+    () => tags.map((t) => t.name.trim().toLowerCase()),
     [tags]
   )
 
@@ -37,121 +30,86 @@ const TagManager = ({
     !normalizedNames.includes(tagName.trim().toLowerCase())
 
   const handleCreateTag = () => {
-    const trimmedName = tagName.trim()
-    if (!trimmedName) return
-    if (normalizedNames.includes(trimmedName.toLowerCase())) return
-
-    onCreateTag(trimmedName, selectedColor)
+    const trimmed = tagName.trim()
+    if (!trimmed) return
+    if (normalizedNames.includes(trimmed.toLowerCase())) return
+    onCreateTag(trimmed, selectedColor)
     setTagName('')
   }
 
   return (
-    <section className="rounded-2xl border border-[#2a2a2a] bg-[#111111] p-4">
-      <div className="mb-4">
-        <h2 className="text-base font-semibold text-white">Tags</h2>
-        <p className="text-xs text-gray-400">
-          Create reusable tags for objects and regions
-        </p>
-      </div>
+    <div className="flex h-full flex-col overflow-y-auto">
+      <div className="border-b border-[#181818] px-3 py-3">
+        <p className="mb-2.5 text-[9px] uppercase tracking-widest text-[#383838]">create tag</p>
 
-      <div className="space-y-3 rounded-xl border border-[#2d2d2d] bg-[#171717] p-3">
-        <div>
-          <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-            Tag Name
-          </label>
-          <Input
+        <div className="flex flex-col gap-2">
+          <input
             value={tagName}
             onChange={(e) => setTagName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleCreateTag()
-            }}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleCreateTag() }}
+            maxLength={50}
             placeholder="e.g. entry, plant, support"
-            className="border-[#2d2d2d] bg-[#101010] text-white"
+            className="h-7 w-full rounded border border-[#1e1e1e] bg-[#0d0d0d] px-2 text-xs text-[#bbb] outline-none focus:border-[#3b82f6] transition"
           />
-        </div>
 
-        <div>
-          <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-            Tag Color
-          </label>
-
-          <div className="flex flex-wrap gap-2">
-            {DEFAULT_TAG_COLORS.map((color) => {
-              const isSelected = color === selectedColor
-
-              return (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => setSelectedColor(color)}
-                  className={`h-8 w-8 rounded-full border-2 transition ${
-                    isSelected
-                      ? 'border-white scale-105'
-                      : 'border-transparent opacity-85 hover:opacity-100'
-                  }`}
-                  style={{ backgroundColor: color }}
-                  aria-label={`Select color ${color}`}
-                  title={color}
-                />
-              )
-            })}
+          <div className="flex flex-wrap gap-1.5">
+            {DEFAULT_TAG_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                onClick={() => setSelectedColor(color)}
+                className="h-5 w-5 rounded-full transition"
+                style={{
+                  backgroundColor: color,
+                  outline: color === selectedColor ? `2px solid ${color}` : 'none',
+                  outlineOffset: '2px',
+                }}
+              />
+            ))}
           </div>
-        </div>
 
-        <Button
-          type="button"
-          onClick={handleCreateTag}
-          disabled={!canCreate}
-          className="w-full cursor-pointer bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Plus size={16} className="mr-2" />
-          Create Tag
-        </Button>
+          <button
+            type="button"
+            onClick={handleCreateTag}
+            disabled={!canCreate}
+            className="flex h-7 w-full items-center justify-center gap-1.5 rounded border border-[#1d3a5e] bg-[#0d1829] text-xs text-[#6ba3e0] transition hover:bg-[#112040] disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <Plus size={11} />
+            Create tag
+          </button>
+        </div>
       </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="flex-1 overflow-y-auto px-3 py-3">
         {tags.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[#333333] bg-[#171717] px-3 py-6 text-center text-sm text-gray-400">
-            No tags created yet.
-          </div>
+          <p className="text-center text-xs text-[#333]">No tags created yet.</p>
         ) : (
-          tags.map((tag) => (
-            <div
-              key={tag.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-[#2d2d2d] bg-[#171717] px-3 py-3"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <span
-                  className="h-3 w-3 shrink-0 rounded-full"
-                  style={{ backgroundColor: tag.color }}
-                />
-                <div className="flex min-w-0 items-center gap-2">
-                  <Tag size={14} className="shrink-0 text-gray-400" />
-                  <span className="truncate text-sm font-medium text-white">
-                    {tag.name}
-                  </span>
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                onClick={() => onDeleteTag(tag.id)}
-                className="cursor-pointer bg-[#3a1f1f] text-white hover:bg-[#522727]"
+          <div className="flex flex-col gap-1.5">
+            {tags.map((tag) => (
+              <div
+                key={tag.id}
+                className="flex items-center justify-between gap-2 rounded border border-[#1a1a1a] bg-[#0f0f0f] px-2.5 py-1.5"
               >
-                <Trash2 size={14} />
-              </Button>
-            </div>
-          ))
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: tag.color }}
+                  />
+                  <span className="truncate text-xs text-[#aaa]">{tag.name}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onDeleteTag(tag.id)}
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[#884444] transition hover:bg-[#1a1010] hover:text-[#ef4444]"
+                >
+                  <Trash2 size={11} />
+                </button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
-
-      <div className="mt-4 rounded-xl border border-[#2d2d2d] bg-[#171717] p-3 text-xs text-gray-400">
-        Tags are being added now so objects can later reuse them in the inspector.
-        {/* Later,
-            Add object list filtering by selected tag(s),
-            hide/show by tag, and search by tag name. */}
-      </div>
-    </section>
+    </div>
   )
 }
 

@@ -3,17 +3,30 @@
 import { ChangeEvent } from 'react'
 import { Copy, Lock, LockOpen, Trash2 } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-
 import { BuilderInspectorProps, BuilderObject, StratTag } from './builder.types'
 
-interface ExtendedBuilderInspectorProps extends BuilderInspectorProps {
-  onDeleteObject: (objectId: string) => void
-  onDuplicateObject: (objectId: string) => void
-  onUpdateObject: (objectId: string, updates: Partial<BuilderObject>) => void
-  onToggleObjectTag: (objectId: string, tagId: string) => void
-}
+const Field = ({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) => (
+  <div className="flex flex-col gap-1">
+    <span className="text-[10px] uppercase tracking-widest text-[#3a3a3a]">{label}</span>
+    {children}
+  </div>
+)
+
+const fieldCls =
+  'h-7 w-full rounded border border-[#1e1e1e] bg-[#0d0d0d] px-2 text-xs text-[#bbb] outline-none focus:border-[#3b82f6] transition'
+
+const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div className="border-t border-[#181818] px-3 py-3">
+    <p className="mb-2.5 text-[9px] uppercase tracking-widest text-[#383838]">{label}</p>
+    <div className="flex flex-col gap-2">{children}</div>
+  </div>
+)
 
 const BuilderInspector = ({
   selectedObject,
@@ -23,43 +36,36 @@ const BuilderInspector = ({
   onDuplicateObject,
   onUpdateObject,
   onToggleObjectTag,
-}: ExtendedBuilderInspectorProps) => {
+}: BuilderInspectorProps) => {
   if (!selectedObject) {
     return (
-      <aside className="rounded-2xl border border-[#2a2a2a] bg-[#111111] p-4">
-        <h2 className="text-base font-semibold text-white">Inspector</h2>
-        <p className="mt-2 text-sm text-gray-400">
+      <div className="flex h-full items-center justify-center px-4">
+        <p className="text-center text-xs text-[#333]">
           Select an object on the canvas to edit its details.
         </p>
-      </aside>
+      </div>
     )
   }
 
-  const handleMetadataChange = (
-    field: 'label' | 'description',
-    value: string
-  ) => {
-    onUpdateMetadata(selectedObject.id, {
-      [field]: value,
-    })
+  const handleMetadataChange = (field: 'label' | 'description', value: string) => {
+    onUpdateMetadata(selectedObject.id, { [field]: value })
   }
 
   const handleCanvasChange = (
-    field:
-      | 'x'
-      | 'y'
-      | 'width'
-      | 'height'
-      | 'rotation'
-      | 'opacity'
-      | 'zIndex',
+    field: 'x' | 'y' | 'width' | 'height' | 'rotation' | 'opacity' | 'zIndex',
     value: number
   ) => {
+    const clamped: Record<string, number> = {
+      x: Math.max(0, value),
+      y: Math.max(0, value),
+      width: Math.max(10, value),
+      height: Math.max(10, value),
+      rotation: ((value % 360) + 360) % 360,
+      opacity: Math.min(1, Math.max(0, value)),
+      zIndex: Math.max(0, Math.round(value)),
+    }
     onUpdateObject(selectedObject.id, {
-      canvas: {
-        ...selectedObject.canvas,
-        [field]: value,
-      },
+      canvas: { ...selectedObject.canvas, [field]: clamped[field] ?? value },
     } as Partial<BuilderObject>)
   }
 
@@ -68,37 +74,28 @@ const BuilderInspector = ({
     value: string | number
   ) => {
     onUpdateObject(selectedObject.id, {
-      style: {
-        ...selectedObject.style,
-        [field]: value,
-      },
+      style: { ...selectedObject.style, [field]: value },
     } as Partial<BuilderObject>)
   }
 
   const handleToggleLocked = () => {
     onUpdateObject(selectedObject.id, {
-      canvas: {
-        ...selectedObject.canvas,
-        locked: !selectedObject.canvas.locked,
-      },
+      canvas: { ...selectedObject.canvas, locked: !selectedObject.canvas.locked },
     } as Partial<BuilderObject>)
   }
 
   const renderTagButton = (tag: StratTag) => {
     const isSelected = selectedObject.metadata.tagIds.includes(tag.id)
-
     return (
       <button
         key={tag.id}
         type="button"
         onClick={() => onToggleObjectTag(selectedObject.id, tag.id)}
-        className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-          isSelected
-            ? 'border-white text-white'
-            : 'border-[#2d2d2d] text-gray-300'
-        }`}
+        className="rounded-full border px-2.5 py-0.5 text-xs transition"
         style={{
           backgroundColor: isSelected ? tag.color : 'transparent',
+          borderColor: isSelected ? tag.color : '#2a2a2a',
+          color: isSelected ? '#fff' : '#666',
         }}
       >
         {tag.name}
@@ -106,142 +103,97 @@ const BuilderInspector = ({
     )
   }
 
-  const renderTypeSpecificFields = () => {
+  const renderTypeSpecific = () => {
     switch (selectedObject.type) {
       case 'text':
         return (
-          <>
-            <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                Text
-              </label>
-              <Input
+          <Section label="text">
+            <Field label="Content">
+              <input
+                className={fieldCls}
                 value={selectedObject.text}
                 onChange={(e) =>
-                  onUpdateObject(selectedObject.id, {
-                    text: e.target.value,
-                  } as Partial<BuilderObject>)
+                  onUpdateObject(selectedObject.id, { text: e.target.value } as Partial<BuilderObject>)
                 }
-                className="border-[#2d2d2d] bg-[#101010] text-white"
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                  Font Size
-                </label>
-                <Input
+            </Field>
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Font size">
+                <input
                   type="number"
+                  className={fieldCls}
                   value={selectedObject.fontSize}
                   onChange={(e) =>
-                    onUpdateObject(selectedObject.id, {
-                      fontSize: Number(e.target.value),
-                    } as Partial<BuilderObject>)
+                    onUpdateObject(selectedObject.id, { fontSize: Number(e.target.value) } as Partial<BuilderObject>)
                   }
-                  className="border-[#2d2d2d] bg-[#101010] text-white"
                 />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                  Align
-                </label>
+              </Field>
+              <Field label="Align">
                 <select
+                  className={fieldCls}
                   value={selectedObject.align}
                   onChange={(e: ChangeEvent<HTMLSelectElement>) =>
                     onUpdateObject(selectedObject.id, {
                       align: e.target.value as 'left' | 'center' | 'right',
                     } as Partial<BuilderObject>)
                   }
-                  className="h-10 w-full rounded-md border border-[#2d2d2d] bg-[#101010] px-3 text-white"
                 >
                   <option value="left">Left</option>
                   <option value="center">Center</option>
                   <option value="right">Right</option>
                 </select>
-              </div>
+              </Field>
             </div>
-          </>
+          </Section>
         )
 
       case 'arrow':
         return (
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                Pointer Length
-              </label>
-              <Input
-                type="number"
-                value={selectedObject.pointerLength}
-                onChange={(e) =>
-                  onUpdateObject(selectedObject.id, {
-                    pointerLength: Number(e.target.value),
-                  } as Partial<BuilderObject>)
-                }
-                className="border-[#2d2d2d] bg-[#101010] text-white"
-              />
+          <Section label="arrow">
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Pointer length">
+                <input
+                  type="number"
+                  className={fieldCls}
+                  value={selectedObject.pointerLength}
+                  onChange={(e) =>
+                    onUpdateObject(selectedObject.id, { pointerLength: Number(e.target.value) } as Partial<BuilderObject>)
+                  }
+                />
+              </Field>
+              <Field label="Pointer width">
+                <input
+                  type="number"
+                  className={fieldCls}
+                  value={selectedObject.pointerWidth}
+                  onChange={(e) =>
+                    onUpdateObject(selectedObject.id, { pointerWidth: Number(e.target.value) } as Partial<BuilderObject>)
+                  }
+                />
+              </Field>
             </div>
-
-            <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                Pointer Width
-              </label>
-              <Input
-                type="number"
-                value={selectedObject.pointerWidth}
-                onChange={(e) =>
-                  onUpdateObject(selectedObject.id, {
-                    pointerWidth: Number(e.target.value),
-                  } as Partial<BuilderObject>)
-                }
-                className="border-[#2d2d2d] bg-[#101010] text-white"
-              />
-            </div>
-          </div>
+          </Section>
         )
 
       case 'rectangle':
         return (
-          <div>
-            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-              Corner Radius
-            </label>
-            <Input
-              type="number"
-              value={selectedObject.cornerRadius}
-              onChange={(e) =>
-                onUpdateObject(selectedObject.id, {
-                  cornerRadius: Number(e.target.value),
-                } as Partial<BuilderObject>)
-              }
-              className="border-[#2d2d2d] bg-[#101010] text-white"
-            />
-          </div>
-        )
-
-      case 'line':
-        return (
-          <div className="rounded-xl border border-[#2d2d2d] bg-[#171717] p-3 text-xs text-gray-400">
-            Line points will later be editable directly from canvas handles.
-          </div>
-        )
-
-      case 'image':
-        return (
-          <div className="rounded-xl border border-[#2d2d2d] bg-[#171717] p-3 text-xs text-gray-400">
-            Image source comes from uploaded asset or map attachment.
-          </div>
+          <Section label="rectangle">
+            <Field label="Corner radius">
+              <input
+                type="number"
+                className={fieldCls}
+                value={selectedObject.cornerRadius}
+                onChange={(e) =>
+                  onUpdateObject(selectedObject.id, { cornerRadius: Number(e.target.value) } as Partial<BuilderObject>)
+                }
+              />
+            </Field>
+          </Section>
         )
 
       case 'icon':
-        return (
-          <div className="rounded-xl border border-[#2d2d2d] bg-[#171717] p-3 text-xs text-gray-400">
-            Icon source comes from the project icon palette.
-          </div>
-        )
-
+      case 'image':
+      case 'line':
       case 'ellipse':
       default:
         return null
@@ -249,252 +201,114 @@ const BuilderInspector = ({
   }
 
   return (
-    <aside className="rounded-2xl border border-[#2a2a2a] bg-[#111111] p-4">
-      <div className="mb-4 flex items-start justify-between gap-2">
-        <div>
-          <h2 className="text-base font-semibold text-white">Inspector</h2>
-          <p className="text-xs text-gray-400">
-            Type: <span className="font-medium text-white">{selectedObject.type}</span>
-          </p>
-        </div>
-
-        <div className="flex gap-2">
-          <Button
+    <div className="flex h-full flex-col overflow-y-auto">
+      <div className="flex items-center justify-between px-3 py-2.5">
+        <span className="text-[10px] uppercase tracking-widest text-[#444]">
+          {selectedObject.type}
+        </span>
+        <div className="flex items-center gap-1">
+          <button
             type="button"
             onClick={() => onDuplicateObject(selectedObject.id)}
-            className="cursor-pointer bg-[#1d2735] text-white hover:bg-[#263349]"
+            className="flex h-6 w-6 items-center justify-center rounded text-[#555] transition hover:bg-[#1a1a1a] hover:text-[#aaa]"
+            title="Duplicate"
           >
-            <Copy size={14} />
-          </Button>
-
-          <Button
+            <Copy size={12} />
+          </button>
+          <button
             type="button"
             onClick={handleToggleLocked}
-            className="cursor-pointer bg-[#222222] text-white hover:bg-[#303030]"
+            className="flex h-6 w-6 items-center justify-center rounded text-[#555] transition hover:bg-[#1a1a1a] hover:text-[#aaa]"
+            title={selectedObject.canvas.locked ? 'Unlock' : 'Lock'}
           >
-            {selectedObject.canvas.locked ? <Lock size={14} /> : <LockOpen size={14} />}
-          </Button>
-
-          <Button
+            {selectedObject.canvas.locked ? <Lock size={12} /> : <LockOpen size={12} />}
+          </button>
+          <button
             type="button"
             onClick={() => onDeleteObject(selectedObject.id)}
-            className="cursor-pointer bg-[#3a1f1f] text-white hover:bg-[#522727]"
+            className="flex h-6 w-6 items-center justify-center rounded text-[#884444] transition hover:bg-[#1a1010] hover:text-[#ef4444]"
+            title="Delete"
           >
-            <Trash2 size={14} />
-          </Button>
+            <Trash2 size={12} />
+          </button>
         </div>
       </div>
 
-      <div className="space-y-4">
-        <div className="rounded-xl border border-[#2d2d2d] bg-[#171717] p-3">
-          <div className="mb-3 text-xs font-medium uppercase tracking-wide text-gray-400">
-            Metadata
-          </div>
-
-          <div className="space-y-3">
-            <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                Label
-              </label>
-              <Input
-                value={selectedObject.metadata.label}
-                onChange={(e) => handleMetadataChange('label', e.target.value)}
-                placeholder="Object label"
-                className="border-[#2d2d2d] bg-[#101010] text-white"
-              />
+      <Section label="metadata">
+        <Field label="Label">
+          <input
+            className={fieldCls}
+            value={selectedObject.metadata.label}
+            onChange={(e) => handleMetadataChange('label', e.target.value)}
+            placeholder="Object label"
+          />
+        </Field>
+        <Field label="Description">
+          <textarea
+            value={selectedObject.metadata.description}
+            onChange={(e) => handleMetadataChange('description', e.target.value)}
+            placeholder="Describe what this object means in the strat"
+            rows={3}
+            className="w-full resize-none rounded border border-[#1e1e1e] bg-[#0d0d0d] px-2 py-1.5 text-xs text-[#bbb] outline-none focus:border-[#3b82f6] transition"
+          />
+        </Field>
+        {tags.length > 0 && (
+          <Field label="Tags">
+            <div className="flex flex-wrap gap-1.5">
+              {tags.map(renderTagButton)}
             </div>
+          </Field>
+        )}
+        {tags.length === 0 && (
+          <p className="text-xs text-[#333]">No tags created yet.</p>
+        )}
+      </Section>
 
-            <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                Description
-              </label>
-              <textarea
-                value={selectedObject.metadata.description}
-                onChange={(e) =>
-                  handleMetadataChange('description', e.target.value)
-                }
-                placeholder="Describe what this object means in the strat"
-                className="min-h-[100px] w-full rounded-md border border-[#2d2d2d] bg-[#101010] px-3 py-2 text-sm text-white outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                Tags
-              </label>
-
-              {tags.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-[#333333] bg-[#121212] px-3 py-3 text-xs text-gray-400">
-                  No tags created yet.
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">{tags.map(renderTagButton)}</div>
-              )}
-
-              {/* Future idea:
-                  Add filtering by tag in the object list / canvas layer panel. */}
-            </div>
-          </div>
+      <Section label="canvas">
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Width">
+            <input type="number" className={fieldCls} value={Math.round(selectedObject.canvas.width)}
+              onChange={(e) => handleCanvasChange('width', Number(e.target.value))} />
+          </Field>
+          <Field label="Height">
+            <input type="number" className={fieldCls} value={Math.round(selectedObject.canvas.height)}
+              onChange={(e) => handleCanvasChange('height', Number(e.target.value))} />
+          </Field>
+          <Field label="Rotation">
+            <input type="number" className={fieldCls} value={Math.round(selectedObject.canvas.rotation)}
+              onChange={(e) => handleCanvasChange('rotation', Number(e.target.value))} />
+          </Field>
+          <Field label="Opacity">
+            <input type="number" step="0.1" min="0" max="1" className={fieldCls}
+              value={selectedObject.canvas.opacity}
+              onChange={(e) => handleCanvasChange('opacity', Number(e.target.value))} />
+          </Field>
+          <Field label="Layer order">
+            <input type="number" className={fieldCls} value={selectedObject.canvas.zIndex}
+              onChange={(e) => handleCanvasChange('zIndex', Number(e.target.value))} />
+          </Field>
         </div>
+      </Section>
 
-        <div className="rounded-xl border border-[#2d2d2d] bg-[#171717] p-3">
-          <div className="mb-3 text-xs font-medium uppercase tracking-wide text-gray-400">
-            Canvas
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                X
-              </label>
-              <Input
-                type="number"
-                value={selectedObject.canvas.x}
-                onChange={(e) => handleCanvasChange('x', Number(e.target.value))}
-                className="border-[#2d2d2d] bg-[#101010] text-white"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                Y
-              </label>
-              <Input
-                type="number"
-                value={selectedObject.canvas.y}
-                onChange={(e) => handleCanvasChange('y', Number(e.target.value))}
-                className="border-[#2d2d2d] bg-[#101010] text-white"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                Width
-              </label>
-              <Input
-                type="number"
-                value={selectedObject.canvas.width}
-                onChange={(e) =>
-                  handleCanvasChange('width', Number(e.target.value))
-                }
-                className="border-[#2d2d2d] bg-[#101010] text-white"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                Height
-              </label>
-              <Input
-                type="number"
-                value={selectedObject.canvas.height}
-                onChange={(e) =>
-                  handleCanvasChange('height', Number(e.target.value))
-                }
-                className="border-[#2d2d2d] bg-[#101010] text-white"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                Rotation
-              </label>
-              <Input
-                type="number"
-                value={selectedObject.canvas.rotation}
-                onChange={(e) =>
-                  handleCanvasChange('rotation', Number(e.target.value))
-                }
-                className="border-[#2d2d2d] bg-[#101010] text-white"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                Opacity
-              </label>
-              <Input
-                type="number"
-                step="0.1"
-                min="0"
-                max="1"
-                value={selectedObject.canvas.opacity}
-                onChange={(e) =>
-                  handleCanvasChange('opacity', Number(e.target.value))
-                }
-                className="border-[#2d2d2d] bg-[#101010] text-white"
-              />
-            </div>
-
-            <div className="col-span-2">
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                Layer Order
-              </label>
-              <Input
-                type="number"
-                value={selectedObject.canvas.zIndex}
-                onChange={(e) =>
-                  handleCanvasChange('zIndex', Number(e.target.value))
-                }
-                className="border-[#2d2d2d] bg-[#101010] text-white"
-              />
-            </div>
-          </div>
+      <Section label="style">
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Fill">
+            <input className={fieldCls} value={selectedObject.style.fill}
+              onChange={(e) => handleStyleChange('fill', e.target.value)} />
+          </Field>
+          <Field label="Stroke">
+            <input className={fieldCls} value={selectedObject.style.stroke}
+              onChange={(e) => handleStyleChange('stroke', e.target.value)} />
+          </Field>
+          <Field label="Stroke width">
+            <input type="number" className={fieldCls} value={selectedObject.style.strokeWidth}
+              onChange={(e) => handleStyleChange('strokeWidth', Number(e.target.value))} />
+          </Field>
         </div>
+      </Section>
 
-        <div className="rounded-xl border border-[#2d2d2d] bg-[#171717] p-3">
-          <div className="mb-3 text-xs font-medium uppercase tracking-wide text-gray-400">
-            Style
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                Fill
-              </label>
-              <Input
-                value={selectedObject.style.fill}
-                onChange={(e) => handleStyleChange('fill', e.target.value)}
-                className="border-[#2d2d2d] bg-[#101010] text-white"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                Stroke
-              </label>
-              <Input
-                value={selectedObject.style.stroke}
-                onChange={(e) => handleStyleChange('stroke', e.target.value)}
-                className="border-[#2d2d2d] bg-[#101010] text-white"
-              />
-            </div>
-
-            <div className="col-span-2">
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-400">
-                Stroke Width
-              </label>
-              <Input
-                type="number"
-                value={selectedObject.style.strokeWidth}
-                onChange={(e) =>
-                  handleStyleChange('strokeWidth', Number(e.target.value))
-                }
-                className="border-[#2d2d2d] bg-[#101010] text-white"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-[#2d2d2d] bg-[#171717] p-3">
-          <div className="mb-3 text-xs font-medium uppercase tracking-wide text-gray-400">
-            Object-Specific
-          </div>
-
-          <div className="space-y-3">{renderTypeSpecificFields()}</div>
-        </div>
-      </div>
-    </aside>
+      {renderTypeSpecific()}
+    </div>
   )
 }
 

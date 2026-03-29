@@ -1,6 +1,9 @@
 'use client'
 
+import { toast } from 'sonner'
+
 import {
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -19,10 +22,11 @@ import {
   Text as KonvaText,
   Transformer,
 } from 'react-konva'
-
-import BuilderInspector from './BuilderInspector'
-import BuilderSidebar from './BuilderSidebar'
-import BuilderToolbar from './BuilderToolbar'
+import BuilderLayersPanel from './BuilderLayersPanel'
+import BuilderTopBar from './BuilderTopBar'
+import BuilderSlideStrip from './BuilderSlideStrip'
+import BuilderToolsBar from './BuilderToolsBar'
+import BuilderRightPanel from './BuilderRightPanel'
 import {
   BuilderObject,
   BuilderObjectType,
@@ -34,99 +38,87 @@ import {
   UploadedIcon,
 } from './builder.types'
 import {
+  clamp,
   createDefaultObject,
   createDefaultProject,
   createDefaultSlide,
   createDefaultTag,
+  createIconPaletteGroup,
   createUploadedIcon,
   duplicateObject,
   duplicateSlide,
   findSlideById,
   getNowIso,
+  validateBackgroundFile,
+  validateIconFile,
 } from './builder.utils'
 
-/* =========================================================
-   CONFIG
-========================================================= */
+
 
 const STAGE_WIDTH = 1100
 const STAGE_HEIGHT = 700
-
-/* =========================================================
-   IMAGE LOADER
-========================================================= */
 
 function useLoadedImage(src: string | null) {
   const [image, setImage] = useState<HTMLImageElement | null>(null)
 
   useEffect(() => {
-    if (!src) {
-      setImage(null)
-      return
-    }
+    if (!src) { setImage(null); return }
 
     const img = new window.Image()
     img.crossOrigin = 'anonymous'
     img.onload = () => setImage(img)
     img.src = src
 
-    return () => {
-      img.onload = null
-    }
+    return () => { img.onload = null; img.src = '' }
   }, [src])
 
   return image
 }
 
-/* =========================================================
-   HELPERS
-========================================================= */
+function useContainerWidth(ref: React.RefObject<HTMLDivElement | null>): number {
+  const [width, setWidth] = useState(STAGE_WIDTH)
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    setWidth(el.getBoundingClientRect().width)
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) setWidth(entry.contentRect.width)
+    })
+
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [ref])
+
+  return width
 }
 
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
-
     reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        resolve(reader.result)
-      } else {
-        reject(new Error('Failed to read file'))
-      }
+      if (typeof reader.result === 'string') resolve(reader.result)
+      else reject(new Error('Failed to read file'))
     }
-
     reader.onerror = () => reject(new Error('Failed to read file'))
     reader.readAsDataURL(file)
   })
 }
 
-function getPointerPosition(stage: Konva.Stage | null) {
-  if (!stage) {
-    return { x: 120, y: 120 }
-  }
-
+function getLogicalPointerPosition(stage: Konva.Stage | null, scale: number) {
+  if (!stage) return { x: 120, y: 120 }
   const pointer = stage.getPointerPosition()
-  if (!pointer) {
-    return { x: 120, y: 120 }
-  }
-
-  return pointer
+  if (!pointer) return { x: 120, y: 120 }
+  return { x: pointer.x / scale, y: pointer.y / scale }
 }
 
 function sortObjectsByLayer(objects: BuilderObject[]) {
   return [...objects].sort((a, b) => a.canvas.zIndex - b.canvas.zIndex)
 }
 
-
-
-/* =========================================================
-   CANVAS OBJECT IMAGE
-========================================================= */
-
-const CanvasImageObject = ({
+const CanvasImageObject = memo(({
   object,
   isSelected,
   onSelect,
@@ -142,7 +134,6 @@ const CanvasImageObject = ({
   nodeRef: (node: Konva.Image | null) => void
 }) => {
   const image = useLoadedImage(object.src)
-
   if (!image) return null
 
   return (
@@ -166,37 +157,29 @@ const CanvasImageObject = ({
       shadowBlur={isSelected ? 12 : 0}
     />
   )
-}
+})
 
-/* =========================================================
-   MAIN BUILDER
-========================================================= */
+CanvasImageObject.displayName = 'CanvasImageObject'
 
 const Builder = () => {
-  /* -----------------------------
-     STATE
-  ----------------------------- */
   const [project, setProject] = useState<BuilderProject>(() => createDefaultProject())
   const [activeTool, setActiveTool] = useState<ToolType>('select')
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null)
+  const [rightPanelTab, setRightPanelTab] = useState<'assets' | 'inspector' | 'tags'>('assets')
+  const [filterTagIds, setFilterTagIds] = useState<string[]>([])
 
-  /* -----------------------------
-     REFS
-  ----------------------------- */
   const stageRef = useRef<Konva.Stage | null>(null)
   const transformerRef = useRef<Konva.Transformer | null>(null)
   const objectNodeMapRef = useRef<Record<string, Konva.Node | null>>({})
+  const canvasContainerRef = useRef<HTMLDivElement | null>(null)
 
-  /* -----------------------------
-     DERIVED
-  ----------------------------- */
   const activeSlide = useMemo(
     () => findSlideById(project.slides, project.activeSlideId),
     [project.slides, project.activeSlideId]
   )
 
   const selectedObject = useMemo(
-    () => activeSlide?.objects.find((object) => object.id === selectedObjectId) ?? null,
+    () => activeSlide?.objects.find((o) => o.id === selectedObjectId) ?? null,
     [activeSlide, selectedObjectId]
   )
 
@@ -204,62 +187,24 @@ const Builder = () => {
     () => sortObjectsByLayer(activeSlide?.objects ?? []),
     [activeSlide?.objects]
   )
+  const visibleObjects = useMemo(() => {
+    if (filterTagIds.length === 0) return sortedObjects
+    return sortedObjects.filter((obj) =>
+      obj.metadata.tagIds.some((id) => filterTagIds.includes(id))
+    )
+  }, [sortedObjects, filterTagIds])
 
   const backgroundImage = useLoadedImage(activeSlide?.backgroundImage ?? null)
 
-  /* -----------------------------
-     PROJECT / SLIDE HELPERS
-  ----------------------------- */
-  const updateProject = useCallback((updater: (prev: BuilderProject) => BuilderProject) => {
-    setProject((prev) => {
-      const next = updater(prev)
-      return {
-        ...next,
-        updatedAt: getNowIso(),
-      }
-    })
-  }, [])
+  const containerWidth = useContainerWidth(canvasContainerRef)
+  const stageScale = Math.min(1, containerWidth / STAGE_WIDTH)
+  const scaledStageWidth = STAGE_WIDTH * stageScale
+  const scaledStageHeight = STAGE_HEIGHT * stageScale
 
-  const updateActiveSlide = useCallback(
-    (updater: (slide: BuilderSlide) => BuilderSlide) => {
-      updateProject((prev) => {
-        if (!prev.activeSlideId) return prev
+  useEffect(() => {
+    if (selectedObjectId) setRightPanelTab('inspector')
+  }, [selectedObjectId])
 
-        return {
-          ...prev,
-          slides: prev.slides.map((slide) => {
-            if (slide.id !== prev.activeSlideId) return slide
-            return {
-              ...updater(slide),
-              updatedAt: getNowIso(),
-            }
-          }),
-        }
-      })
-    },
-    [updateProject]
-  )
-
-  const updateObjectInActiveSlide = useCallback(
-    (objectId: string, updater: (object: BuilderObject) => BuilderObject) => {
-      updateActiveSlide((slide) => ({
-        ...slide,
-        objects: slide.objects.map((object) =>
-          object.id === objectId
-            ? {
-                ...updater(object),
-                updatedAt: getNowIso(),
-              }
-            : object
-        ),
-      }))
-    },
-    [updateActiveSlide]
-  )
-
-  /* -----------------------------
-     TOOL / TRANSFORMER
-  ----------------------------- */
   useEffect(() => {
     const transformer = transformerRef.current
     if (!transformer) return
@@ -274,46 +219,72 @@ const Builder = () => {
     if (!node) {
       transformer.nodes([])
       transformer.getLayer()?.batchDraw()
-    return
+      return
     }
-
 
     transformer.nodes([node])
     transformer.getLayer()?.batchDraw()
   }, [selectedObjectId, selectedObject])
-  
-  const transformerAnchors =
-  selectedObject?.type === 'line' || selectedObject?.type === 'arrow'
-    ? ['middle-left', 'middle-right']
-    : [
-        'top-left',
-        'top-center',
-        'top-right',
-        'middle-right',
-        'bottom-right',
-        'bottom-center',
-        'bottom-left',
-        'middle-left',
-      ]
 
-  /* -----------------------------
-     SLIDE ACTIONS
-  ----------------------------- */
+  const transformerAnchors = useMemo(
+    () =>
+      selectedObject?.type === 'line' || selectedObject?.type === 'arrow'
+        ? ['middle-left', 'middle-right']
+        : ['top-left', 'top-center', 'top-right', 'middle-right', 'bottom-right', 'bottom-center', 'bottom-left', 'middle-left'],
+    [selectedObject?.type]
+  )
+
+  // project / slide updaters
+
+  const updateProject = useCallback((updater: (prev: BuilderProject) => BuilderProject) => {
+    setProject((prev) => ({ ...updater(prev), updatedAt: getNowIso() }))
+  }, [])
+
+  const updateActiveSlide = useCallback(
+    (updater: (slide: BuilderSlide) => BuilderSlide) => {
+      updateProject((prev) => {
+        if (!prev.activeSlideId) return prev
+        return {
+          ...prev,
+          slides: prev.slides.map((slide) =>
+            slide.id !== prev.activeSlideId
+              ? slide
+              : { ...updater(slide), updatedAt: getNowIso() }
+          ),
+        }
+      })
+    },
+    [updateProject]
+  )
+
+  const updateObjectInActiveSlide = useCallback(
+    (objectId: string, updater: (object: BuilderObject) => BuilderObject) => {
+      updateActiveSlide((slide) => ({
+        ...slide,
+        objects: slide.objects.map((o) =>
+          o.id === objectId ? { ...updater(o), updatedAt: getNowIso() } : o
+        ),
+      }))
+    },
+    [updateActiveSlide]
+  )
+
+  // slide actions
+
   const handleSelectSlide = (slideId: string) => {
     setSelectedObjectId(null)
-    updateProject((prev) => ({
-      ...prev,
-      activeSlideId: slideId,
-    }))
+
+    const currentSlide = project.slides.find((s) => s.id === project.activeSlideId)
+    if (currentSlide) {
+      currentSlide.objects.forEach((obj) => { delete objectNodeMapRef.current[obj.id] })
+    }
+
+    updateProject((prev) => ({ ...prev, activeSlideId: slideId }))
   }
 
   const handleAddSlide = () => {
-    const nextSlide = createDefaultSlide({
-      name: `Slide ${project.slides.length + 1}`,
-    })
-
+    const nextSlide = createDefaultSlide({ name: `Slide ${project.slides.length + 1}` })
     setSelectedObjectId(null)
-
     updateProject((prev) => ({
       ...prev,
       slides: [...prev.slides, nextSlide],
@@ -324,26 +295,19 @@ const Builder = () => {
   const handleRenameSlide = (slideId: string, newName: string) => {
     updateProject((prev) => ({
       ...prev,
-      slides: prev.slides.map((slide) =>
-        slide.id === slideId ? { ...slide, name: newName, updatedAt: getNowIso() } : slide
+      slides: prev.slides.map((s) =>
+        s.id === slideId ? { ...s, name: newName, updatedAt: getNowIso() } : s
       ),
     }))
   }
 
   const handleDuplicateSlide = (slideId: string) => {
     updateProject((prev) => {
-      const source = prev.slides.find((slide) => slide.id === slideId)
+      const source = prev.slides.find((s) => s.id === slideId)
       if (!source) return prev
-
       const copy = duplicateSlide(source)
-
-      return {
-        ...prev,
-        slides: [...prev.slides, copy],
-        activeSlideId: copy.id,
-      }
+      return { ...prev, slides: [...prev.slides, copy], activeSlideId: copy.id }
     })
-
     setSelectedObjectId(null)
   }
 
@@ -351,66 +315,101 @@ const Builder = () => {
     updateProject((prev) => {
       if (prev.slides.length === 1) return prev
 
-      const nextSlides = prev.slides.filter((slide) => slide.id !== slideId)
-      const nextActiveSlideId =
-        prev.activeSlideId === slideId
-          ? nextSlides[0]?.id ?? null
-          : prev.activeSlideId
-
-      return {
-        ...prev,
-        slides: nextSlides,
-        activeSlideId: nextActiveSlideId,
+      const deletedSlide = prev.slides.find((s) => s.id === slideId)
+      if (deletedSlide) {
+        deletedSlide.objects.forEach((obj) => { delete objectNodeMapRef.current[obj.id] })
       }
-    })
 
+      const nextSlides = prev.slides.filter((s) => s.id !== slideId)
+      const nextActiveSlideId =
+        prev.activeSlideId === slideId ? (nextSlides[0]?.id ?? null) : prev.activeSlideId
+      return { ...prev, slides: nextSlides, activeSlideId: nextActiveSlideId }
+    })
     setSelectedObjectId(null)
   }
 
-  /* -----------------------------
-     TAG ACTIONS
-  ----------------------------- */
+  // tag actions
+
   const handleCreateTag = (name: string, color: string) => {
-    updateProject((prev) => ({
-      ...prev,
-      tags: [...prev.tags, createDefaultTag(name, color)],
-    }))
+    updateProject((prev) => ({ ...prev, tags: [...prev.tags, createDefaultTag(name, color)] }))
   }
 
   const handleDeleteTag = (tagId: string) => {
     updateProject((prev) => ({
       ...prev,
-      tags: prev.tags.filter((tag) => tag.id !== tagId),
+      tags: prev.tags.filter((t) => t.id !== tagId),
       slides: prev.slides.map((slide) => ({
         ...slide,
-        objects: slide.objects.map((object) => ({
-          ...object,
+        objects: slide.objects.map((obj) => ({
+          ...obj,
           metadata: {
-            ...object.metadata,
-            tagIds: object.metadata.tagIds.filter((id) => id !== tagId),
+            ...obj.metadata,
+            tagIds: obj.metadata.tagIds.filter((id) => id !== tagId),
           },
         })),
       })),
     }))
   }
 
-  /* -----------------------------
-     ICON ACTIONS
-  ----------------------------- */
-  const handleUploadIcon = async (file: File) => {
-    const src = await readFileAsDataUrl(file)
+  // icon palette actions
 
+  const handleCreatePalette = (name: string) => {
     updateProject((prev) => ({
       ...prev,
-      uploadedIcons: [
-        ...prev.uploadedIcons,
-        createUploadedIcon({
-          name: file.name.replace(/\.[^/.]+$/, ''),
-          src,
-          fileName: file.name,
-        }),
-      ],
+      iconPalettes: [...prev.iconPalettes, createIconPaletteGroup(name)],
     }))
+  }
+
+  const handleDeletePalette = (paletteId: string) => {
+    updateProject((prev) => ({
+      ...prev,
+      iconPalettes: prev.iconPalettes.filter((p) => p.id !== paletteId),
+      uploadedIcons: prev.uploadedIcons.map((icon) =>
+        icon.paletteId === paletteId ? { ...icon, paletteId: null } : icon
+      ),
+    }))
+  }
+
+  const handleAssignIconToPalette = (iconId: string, paletteId: string | null) => {
+    updateProject((prev) => ({
+      ...prev,
+      uploadedIcons: prev.uploadedIcons.map((icon) =>
+        icon.id === iconId ? { ...icon, paletteId } : icon
+      ),
+    }))
+  }
+
+  // icon actions
+
+  const handleUploadIcon = async (files: FileList, paletteId: string | null = null) => {
+    const fileArray = Array.from(files)
+    let successCount = 0
+
+    for (const file of fileArray) {
+      const error = validateIconFile(file)
+      if (error) { toast.error(`${file.name}: ${error}`); continue }
+
+      try {
+        const src = await readFileAsDataUrl(file)
+        updateProject((prev) => ({
+          ...prev,
+          uploadedIcons: [
+            ...prev.uploadedIcons,
+            createUploadedIcon({
+              name: file.name.replace(/\.[^/.]+$/, ''),
+              src,
+              fileName: file.name,
+              paletteId,
+            }),
+          ],
+        }))
+        successCount++
+      } catch {
+        toast.error(`Failed to read ${file.name}`)
+      }
+    }
+
+    if (successCount > 0) toast.success(`${successCount} icon(s) uploaded`)
   }
 
   const handleDeleteIcon = (iconId: string) => {
@@ -420,7 +419,7 @@ const Builder = () => {
       slides: prev.slides.map((slide) => ({
         ...slide,
         objects: slide.objects.filter(
-          (object) => !(object.type === 'icon' && object.iconId === iconId)
+          (obj) => !(obj.type === 'icon' && obj.iconId === iconId)
         ),
       })),
     }))
@@ -435,108 +434,64 @@ const Builder = () => {
 
     const nextZIndex =
       activeSlide.objects.length > 0
-        ? Math.max(...activeSlide.objects.map((obj) => obj.canvas.zIndex)) + 1
+        ? Math.max(...activeSlide.objects.map((o) => o.canvas.zIndex)) + 1
         : 1
 
     const nextObject = createDefaultObject('icon', {
-      metadata: {
-        label: icon.name,
-        description: '',
-        tagIds: [],
-      },
+      metadata: { label: icon.name, description: '', tagIds: [] },
       iconId: icon.id,
       src: icon.src,
       assetName: icon.name,
       canvas: {
-        x: 120,
-        y: 120,
-        width: 48,
-        height: 48,
-        rotation: 0,
-        opacity: 1,
-        visible: true,
-        locked: false,
-        zIndex: nextZIndex,
-        scaleX: 1,
-        scaleY: 1,
+        x: 120, y: 120,
+        width: 48, height: 48,
+        rotation: 0, opacity: 1,
+        visible: true, locked: false,
+        zIndex: nextZIndex, scaleX: 1, scaleY: 1,
       },
     } as Partial<BuilderObject>) as IconBuilderObject
 
-    updateActiveSlide((slide) => ({
-      ...slide,
-      objects: [...slide.objects, nextObject],
-    }))
-
+    updateActiveSlide((slide) => ({ ...slide, objects: [...slide.objects, nextObject] }))
     setSelectedObjectId(nextObject.id)
     setActiveTool('select')
   }
 
-  /* -----------------------------
-     BACKGROUND ACTIONS
-  ----------------------------- */
-  const handleUploadBackground = async (file: File) => {
-    const src = await readFileAsDataUrl(file)
+  // background actions
 
-    updateActiveSlide((slide) => ({
-      ...slide,
-      backgroundImage: src,
-    }))
+  const handleUploadBackground = async (file: File) => {
+    const error = validateBackgroundFile(file)
+    if (error) { toast.error(error); return }
+
+    try {
+      const src = await readFileAsDataUrl(file)
+      updateActiveSlide((slide) => ({ ...slide, backgroundImage: src }))
+      toast.success('Map uploaded')
+    } catch {
+      toast.error('Failed to read file. Please try again.')
+    }
   }
 
   const handleClearBackground = () => {
-    updateActiveSlide((slide) => ({
-      ...slide,
-      backgroundImage: null,
-    }))
+    updateActiveSlide((slide) => ({ ...slide, backgroundImage: null }))
   }
 
-  /* -----------------------------
-     OBJECT ACTIONS
-  ----------------------------- */
+  // object actions
+
   const handleCreateObjectAt = (type: BuilderObjectType, x: number, y: number) => {
     if (!activeSlide) return
 
     const nextZIndex =
       activeSlide.objects.length > 0
-        ? Math.max(...activeSlide.objects.map((obj) => obj.canvas.zIndex)) + 1
+        ? Math.max(...activeSlide.objects.map((o) => o.canvas.zIndex)) + 1
         : 1
 
-    const overrides: Partial<BuilderObject> = {
-      canvas: {
-        x,
-        y,
-        width: 120,
-        height: 80,
-        rotation: 0,
-        opacity: 1,
-        visible: true,
-        locked: false,
-        zIndex: nextZIndex,
-        scaleX: 1,
-        scaleY: 1,
-      },
-      metadata: {
-        label: '',
-        description: '',
-        tagIds: [],
-      },
-    }
+    const base = createDefaultObject(type)
+    const object: BuilderObject = {
+      ...base,
+      canvas: { ...base.canvas, x, y, zIndex: nextZIndex },
+    } as BuilderObject
 
-    if (type === 'text') {
-      overrides.metadata = {
-        label: 'Text',
-        description: '',
-        tagIds: [],
-      }
-    }
-
-    const object = createDefaultObject(type, overrides)
-
-    updateActiveSlide((slide) => ({
-      ...slide,
-      objects: [...slide.objects, object],
-    }))
-
+    updateActiveSlide((slide) => ({ ...slide, objects: [...slide.objects, object] }))
     setSelectedObjectId(object.id)
     setActiveTool('select')
   }
@@ -544,61 +499,42 @@ const Builder = () => {
   const handleDeleteObject = (objectId: string) => {
     updateActiveSlide((slide) => ({
       ...slide,
-      objects: slide.objects.filter((object) => object.id !== objectId),
+      objects: slide.objects.filter((o) => o.id !== objectId),
     }))
-
-    if (selectedObjectId === objectId) {
-      setSelectedObjectId(null)
-    }
+    if (selectedObjectId === objectId) setSelectedObjectId(null)
+    delete objectNodeMapRef.current[objectId]
   }
 
   const handleDuplicateObject = (objectId: string) => {
     if (!activeSlide) return
-
-    const source = activeSlide.objects.find((object) => object.id === objectId)
+    const source = activeSlide.objects.find((o) => o.id === objectId)
     if (!source) return
-
     const copy = duplicateObject(source)
-
-    updateActiveSlide((slide) => ({
-      ...slide,
-      objects: [...slide.objects, copy],
-    }))
-
+    updateActiveSlide((slide) => ({ ...slide, objects: [...slide.objects, copy] }))
     setSelectedObjectId(copy.id)
   }
 
-  const handleUpdateMetadata = (
-    objectId: string,
-    updates: Partial<BuilderObject['metadata']>
-  ) => {
-    updateObjectInActiveSlide(objectId, (object) => ({
-      ...object,
-      metadata: {
-        ...object.metadata,
-        ...updates,
-      },
+  const handleUpdateMetadata = (objectId: string, updates: Partial<BuilderObject['metadata']>) => {
+    updateObjectInActiveSlide(objectId, (o) => ({
+      ...o,
+      metadata: { ...o.metadata, ...updates },
     }))
   }
 
   const handleUpdateObject = (objectId: string, updates: Partial<BuilderObject>) => {
-    updateObjectInActiveSlide(objectId, (object) => ({
-      ...object,
-      ...updates,
-    }) as BuilderObject)
+    updateObjectInActiveSlide(objectId, (o) => ({ ...o, ...updates }) as BuilderObject)
   }
 
   const handleToggleObjectTag = (objectId: string, tagId: string) => {
-    updateObjectInActiveSlide(objectId, (object) => {
-      const exists = object.metadata.tagIds.includes(tagId)
-
+    updateObjectInActiveSlide(objectId, (o) => {
+      const exists = o.metadata.tagIds.includes(tagId)
       return {
-        ...object,
+        ...o,
         metadata: {
-          ...object.metadata,
+          ...o.metadata,
           tagIds: exists
-            ? object.metadata.tagIds.filter((id) => id !== tagId)
-            : [...object.metadata.tagIds, tagId],
+            ? o.metadata.tagIds.filter((id) => id !== tagId)
+            : [...o.metadata.tagIds, tagId],
         },
       }
     })
@@ -610,10 +546,10 @@ const Builder = () => {
   }
 
   const handleDragObject = (objectId: string, x: number, y: number) => {
-    updateObjectInActiveSlide(objectId, (object) => ({
-      ...object,
+    updateObjectInActiveSlide(objectId, (o) => ({
+      ...o,
       canvas: {
-        ...object.canvas,
+        ...o.canvas,
         x: clamp(x, 0, STAGE_WIDTH),
         y: clamp(y, 0, STAGE_HEIGHT),
       },
@@ -621,12 +557,11 @@ const Builder = () => {
   }
 
   const handleTransformObject = (objectId: string, node: Konva.Node) => {
-    const object = activeSlide?.objects.find((item) => item.id === objectId)
+    const object = activeSlide?.objects.find((o) => o.id === objectId)
     if (!object) return
 
     const scaleX = node.scaleX()
     const scaleY = node.scaleY()
-
     const nextWidth = Math.max(10, object.canvas.width * scaleX)
     const nextHeight = Math.max(10, object.canvas.height * scaleY)
 
@@ -648,32 +583,88 @@ const Builder = () => {
     }))
   }
 
-  /* -----------------------------
-     STAGE INTERACTION
-  ----------------------------- */
+  // layers panel actions
+
+  const handleToggleVisibility = (objectId: string) => {
+    updateObjectInActiveSlide(objectId, (o) => ({
+      ...o,
+      canvas: { ...o.canvas, visible: !o.canvas.visible },
+    }))
+  }
+
+  const handleToggleLocked = (objectId: string) => {
+    updateObjectInActiveSlide(objectId, (o) => ({
+      ...o,
+      canvas: { ...o.canvas, locked: !o.canvas.locked },
+    }))
+  }
+
+  const handleMoveObjectUp = (objectId: string) => {
+    updateActiveSlide((slide) => {
+      const sorted = [...slide.objects].sort((a, b) => b.canvas.zIndex - a.canvas.zIndex)
+      const index = sorted.findIndex((o) => o.id === objectId)
+      if (index <= 0) return slide
+
+      const current = sorted[index]
+      const above = sorted[index - 1]
+      const currentZ = current.canvas.zIndex
+      const aboveZ = above.canvas.zIndex
+
+      return {
+        ...slide,
+        objects: slide.objects.map((o) => {
+          if (o.id === current.id) return { ...o, canvas: { ...o.canvas, zIndex: aboveZ } }
+          if (o.id === above.id) return { ...o, canvas: { ...o.canvas, zIndex: currentZ } }
+          return o
+        }),
+      }
+    })
+  }
+
+  const handleMoveObjectDown = (objectId: string) => {
+    updateActiveSlide((slide) => {
+      const sorted = [...slide.objects].sort((a, b) => b.canvas.zIndex - a.canvas.zIndex)
+      const index = sorted.findIndex((o) => o.id === objectId)
+      if (index < 0 || index >= sorted.length - 1) return slide
+
+      const current = sorted[index]
+      const below = sorted[index + 1]
+      const currentZ = current.canvas.zIndex
+      const belowZ = below.canvas.zIndex
+
+      return {
+        ...slide,
+        objects: slide.objects.map((o) => {
+          if (o.id === current.id) return { ...o, canvas: { ...o.canvas, zIndex: belowZ } }
+          if (o.id === below.id) return { ...o, canvas: { ...o.canvas, zIndex: currentZ } }
+          return o
+        }),
+      }
+    })
+  }
+
+  // stage interaction
+
   const handleStageMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    const stage = stageRef.current
     const clickedOnEmpty = e.target === e.target.getStage()
 
     if (clickedOnEmpty) {
       setSelectedObjectId(null)
 
       if (activeTool !== 'select' && activeTool !== 'icon' && activeTool !== 'image') {
-        const pointer = getPointerPosition(stage)
+        const pointer = getLogicalPointerPosition(stageRef.current, stageScale)
         handleCreateObjectAt(activeTool as BuilderObjectType, pointer.x, pointer.y)
       }
     }
   }
 
-  /* -----------------------------
-     RENDER HELPERS
-  ----------------------------- */
-  const renderObject = (object: BuilderObject) => {
+  // render objects
+
+  const renderObject = useCallback((object: BuilderObject) => {
     const isSelected = selectedObjectId === object.id
+
     const commonProps = {
-      ref: (node: Konva.Node | null) => {
-        objectNodeMapRef.current[object.id] = node
-      },
+      ref: (node: Konva.Node | null) => { objectNodeMapRef.current[object.id] = node },
       x: object.canvas.x,
       y: object.canvas.y,
       rotation: object.canvas.rotation,
@@ -697,7 +688,7 @@ const Builder = () => {
       case 'rectangle':
         return (
           <Rect
-          key={object.id}
+            key={object.id}
             {...commonProps}
             width={object.canvas.width}
             height={object.canvas.height}
@@ -705,6 +696,8 @@ const Builder = () => {
             stroke={object.style.stroke}
             strokeWidth={object.style.strokeWidth}
             cornerRadius={object.cornerRadius}
+            perfectDrawEnabled={false}
+            shadowForStrokeEnabled={false}
           />
         )
 
@@ -720,6 +713,8 @@ const Builder = () => {
             strokeWidth={object.style.strokeWidth}
             offsetX={-object.canvas.width / 2}
             offsetY={-object.canvas.height / 2}
+            perfectDrawEnabled={false}
+            shadowForStrokeEnabled={false}
           />
         )
 
@@ -735,6 +730,7 @@ const Builder = () => {
             fontFamily={object.fontFamily}
             align={object.align}
             fill={object.style.fill}
+            shadowForStrokeEnabled={false}
           />
         )
 
@@ -750,6 +746,8 @@ const Builder = () => {
             fill={object.style.fill}
             strokeWidth={object.style.strokeWidth}
             hitStrokeWidth={24}
+            perfectDrawEnabled={false}
+            shadowForStrokeEnabled={false}
           />
         )
 
@@ -762,6 +760,8 @@ const Builder = () => {
             stroke={object.style.stroke}
             strokeWidth={object.style.strokeWidth}
             hitStrokeWidth={24}
+            perfectDrawEnabled={false}
+            shadowForStrokeEnabled={false}
           />
         )
 
@@ -775,63 +775,58 @@ const Builder = () => {
             onSelect={() => handleSelectObject(object.id)}
             onDragEnd={(x, y) => handleDragObject(object.id, x, y)}
             onTransformEnd={(node) => handleTransformObject(object.id, node)}
-            nodeRef={(node) => {
-              objectNodeMapRef.current[object.id] = node
-            }}
+            nodeRef={(node) => { objectNodeMapRef.current[object.id] = node }}
           />
         )
 
       default:
         return null
     }
-  }
+  }, [selectedObjectId, handleSelectObject, handleDragObject, handleTransformObject])
 
-  /* -----------------------------
-     RENDER
-  ----------------------------- */
   return (
-    <div className="flex w-full flex-col gap-4">
-      <BuilderToolbar
+    <div className="flex h-[calc(100vh-64px)] w-full flex-col overflow-hidden bg-[#0e0e0e]">
+      <BuilderTopBar projectTitle={project.title} />
+
+      <BuilderSlideStrip
+        slides={project.slides}
+        activeSlideId={project.activeSlideId}
         activeSlide={activeSlide}
-        activeTool={activeTool}
-        onSetActiveTool={setActiveTool}
+        onSelectSlide={handleSelectSlide}
+        onAddSlide={handleAddSlide}
+        onRenameSlide={handleRenameSlide}
+        onDuplicateSlide={handleDuplicateSlide}
+        onDeleteSlide={handleDeleteSlide}
         onUploadBackground={handleUploadBackground}
         onClearBackground={handleClearBackground}
-        onAddSlide={handleAddSlide}
       />
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[320px_1fr_340px]">
-        <BuilderSidebar
-          slides={project.slides}
-          activeSlideId={project.activeSlideId}
+      <div className="flex min-h-0 flex-1">
+        <BuilderLayersPanel
+          objects={activeSlide?.objects ?? []}
           tags={project.tags}
-          icons={project.uploadedIcons}
-          onSelectSlide={handleSelectSlide}
-          onAddSlide={handleAddSlide}
-          onRenameSlide={handleRenameSlide}
-          onDuplicateSlide={handleDuplicateSlide}
-          onDeleteSlide={handleDeleteSlide}
-          onCreateTag={handleCreateTag}
-          onDeleteTag={handleDeleteTag}
-          onUploadIcon={handleUploadIcon}
-          onDeleteIcon={handleDeleteIcon}
-          onInsertIcon={handleInsertIcon}
+          selectedObjectId={selectedObjectId}
+          filterTagIds={filterTagIds}
+          onSelectObject={handleSelectObject}
+          onToggleVisibility={handleToggleVisibility}
+          onToggleLocked={handleToggleLocked}
+          onMoveObjectUp={handleMoveObjectUp}
+          onMoveObjectDown={handleMoveObjectDown}
+          onSetFilterTagIds={setFilterTagIds}
         />
 
-        <section className="rounded-2xl border border-[#2a2a2a] bg-[#111111] p-4">
-          <div className="mb-3">
-            <h2 className="text-base font-semibold text-white">Canvas</h2>
-            <p className="text-xs text-gray-400">
-              Click empty space with a tool selected to place an object.
-            </p>
-          </div>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <BuilderToolsBar
+            activeTool={activeTool}
+            onSetActiveTool={setActiveTool}
+          />
 
-          <div className="overflow-auto rounded-xl border border-[#2d2d2d] bg-[#171717] p-3">
+          <div ref={canvasContainerRef} className="flex min-h-0 flex-1 items-center justify-start overflow-hidden bg-[#0a0a0a]">
             <Stage
               ref={stageRef}
-              width={STAGE_WIDTH}
-              height={STAGE_HEIGHT}
-              className="rounded-lg bg-[#101010]"
+              width={scaledStageWidth}
+              height={scaledStageHeight}
+              scale={{ x: stageScale, y: stageScale }}
               onMouseDown={handleStageMouseDown}
             >
               <Layer>
@@ -846,7 +841,7 @@ const Builder = () => {
                   />
                 ) : null}
 
-                {sortedObjects.map(renderObject)}
+                {visibleObjects.map(renderObject)}
 
                 <Transformer
                   ref={transformerRef}
@@ -858,17 +853,30 @@ const Builder = () => {
             </Stage>
           </div>
 
-          <div className="mt-4 rounded-xl border border-[#2d2d2d] bg-[#171717] p-3 text-xs text-gray-400">
-            Current tool: <span className="font-medium text-white">{activeTool}</span>
-            <br />
-            Objects on active slide:{' '}
-            <span className="font-medium text-white">
-              {activeSlide?.objects.length ?? 0}
+          <div className="flex h-[22px] shrink-0 items-center gap-4 border-t border-[#1f1f1f] bg-[#111111] px-3">
+            <span className="text-[10px] text-[#444]">
+              <span className="text-[#666]">{activeTool}</span> tool
             </span>
+            <span className="text-[10px] text-[#444]">
+              <span className="text-[#666]">{activeSlide?.objects.length ?? 0}</span> objects
+            </span>
+            {activeSlide?.name && (
+              <span className="text-[10px] text-[#444]">
+                <span className="text-[#666]">{activeSlide.name}</span>
+              </span>
+            )}
           </div>
-        </section>
+        </div>
 
-        <BuilderInspector
+        <BuilderRightPanel
+          icons={project.uploadedIcons}
+          iconPalettes={project.iconPalettes}
+          onUploadIcon={handleUploadIcon}
+          onDeleteIcon={handleDeleteIcon}
+          onInsertIcon={handleInsertIcon}
+          onCreatePalette={handleCreatePalette}
+          onDeletePalette={handleDeletePalette}
+          onAssignIconToPalette={handleAssignIconToPalette}
           selectedObject={selectedObject}
           tags={project.tags}
           onUpdateMetadata={handleUpdateMetadata}
@@ -876,6 +884,10 @@ const Builder = () => {
           onDuplicateObject={handleDuplicateObject}
           onUpdateObject={handleUpdateObject}
           onToggleObjectTag={handleToggleObjectTag}
+          onCreateTag={handleCreateTag}
+          onDeleteTag={handleDeleteTag}
+          activeTab={rightPanelTab}
+          onSetActiveTab={setRightPanelTab}
         />
       </div>
     </div>

@@ -7,7 +7,6 @@ export type ToolType =
   | 'line'
   | 'image'
   | 'icon'
-  
 
 export type BuilderObjectType =
   | 'text'
@@ -17,12 +16,17 @@ export type BuilderObjectType =
   | 'line'
   | 'image'
   | 'icon'
-  
 
 export interface StratTag {
   id: string
   name: string
   color: string
+}
+
+export interface IconPaletteGroup {
+  id: string
+  name: string
+  createdAt: string
 }
 
 export interface UploadedIcon {
@@ -31,6 +35,7 @@ export interface UploadedIcon {
   src: string
   fileName: string
   uploadedAt: string
+  paletteId: string | null
 }
 
 export interface ObjectMetadata {
@@ -79,9 +84,12 @@ export interface TextBuilderObject extends BaseBuilderObject {
 
 export interface ArrowBuilderObject extends BaseBuilderObject {
   type: 'arrow'
-  points: number[]
   pointerLength: number
   pointerWidth: number
+}
+
+export interface LineBuilderObject extends BaseBuilderObject {
+  type: 'line'
 }
 
 export interface RectangleBuilderObject extends BaseBuilderObject {
@@ -93,10 +101,6 @@ export interface EllipseBuilderObject extends BaseBuilderObject {
   type: 'ellipse'
 }
 
-export interface LineBuilderObject extends BaseBuilderObject {
-  type: 'line'
-  points: number[]
-}
 
 export interface ImageBuilderObject extends BaseBuilderObject {
   type: 'image'
@@ -110,7 +114,6 @@ export interface IconBuilderObject extends BaseBuilderObject {
   src: string
   assetName?: string
 }
-
 
 export type BuilderObject =
   | TextBuilderObject
@@ -141,31 +144,69 @@ export interface BuilderProject {
   slides: BuilderSlide[]
   tags: StratTag[]
   uploadedIcons: UploadedIcon[]
+  iconPalettes: IconPaletteGroup[]
   createdAt: string
   updatedAt: string
 }
 
-export interface BuilderSelectionState {
-  selectedObjectId: string | null
+// props
+
+export interface BuilderTopBarProps {
+  projectTitle: string
 }
 
-export interface BuilderInspectorProps {
-  selectedObject: BuilderObject | null
-  tags: StratTag[]
-  onUpdateMetadata: (
-    objectId: string,
-    updates: Partial<ObjectMetadata>
-  ) => void
-}
-
-export interface SlideManagerProps {
+export interface BuilderSlideStripProps {
   slides: BuilderSlide[]
   activeSlideId: string | null
+  activeSlide: BuilderSlide | null
   onSelectSlide: (slideId: string) => void
   onAddSlide: () => void
   onRenameSlide: (slideId: string, newName: string) => void
   onDuplicateSlide: (slideId: string) => void
   onDeleteSlide: (slideId: string) => void
+  onUploadBackground: (file: File) => void
+  onClearBackground: () => void
+}
+
+export interface BuilderToolsBarProps {
+  activeTool: ToolType
+  onSetActiveTool: (tool: ToolType) => void
+}
+
+export interface BuilderRightPanelProps {
+  // Assets tab
+  icons: UploadedIcon[]
+  iconPalettes: IconPaletteGroup[]
+  onUploadIcon: (files: FileList, paletteId: string | null) => void
+  onDeleteIcon: (iconId: string) => void
+  onInsertIcon: (icon: UploadedIcon) => void
+  onCreatePalette: (name: string) => void
+  onDeletePalette: (paletteId: string) => void
+  onAssignIconToPalette: (iconId: string, paletteId: string | null) => void
+  // Inspector tab
+  selectedObject: BuilderObject | null
+  tags: StratTag[]
+  onUpdateMetadata: (objectId: string, updates: Partial<ObjectMetadata>) => void
+  onDeleteObject: (objectId: string) => void
+  onDuplicateObject: (objectId: string) => void
+  onUpdateObject: (objectId: string, updates: Partial<BuilderObject>) => void
+  onToggleObjectTag: (objectId: string, tagId: string) => void
+  // Tags tab
+  onCreateTag: (name: string, color: string) => void
+  onDeleteTag: (tagId: string) => void
+  // tab control
+  activeTab: 'assets' | 'inspector' | 'tags'
+  onSetActiveTab: (tab: 'assets' | 'inspector' | 'tags') => void
+}
+
+export interface BuilderInspectorProps {
+  selectedObject: BuilderObject | null
+  tags: StratTag[]
+  onUpdateMetadata: (objectId: string, updates: Partial<ObjectMetadata>) => void
+  onDeleteObject: (objectId: string) => void
+  onDuplicateObject: (objectId: string) => void
+  onUpdateObject: (objectId: string, updates: Partial<BuilderObject>) => void
+  onToggleObjectTag: (objectId: string, tagId: string) => void
 }
 
 export interface TagManagerProps {
@@ -176,33 +217,24 @@ export interface TagManagerProps {
 
 export interface IconPaletteProps {
   icons: UploadedIcon[]
-  onUploadIcon: (file: File) => void
+  iconPalettes: IconPaletteGroup[]
+  onUploadIcon: (files: FileList, paletteId: string | null) => void
   onDeleteIcon: (iconId: string) => void
-  onInsertIcon?: (icon: UploadedIcon) => void
+  onInsertIcon: (icon: UploadedIcon) => void
+  onCreatePalette: (name: string) => void
+  onDeletePalette: (paletteId: string) => void
+  onAssignIconToPalette: (iconId: string, paletteId: string | null) => void
 }
 
-export interface BuilderToolbarProps {
-  activeSlide: BuilderSlide | null
-  activeTool: ToolType
-  onSetActiveTool: (tool: ToolType) => void
-  onUploadBackground: (file: File) => void
-  onClearBackground: () => void
-  onAddSlide: () => void
-}
-
-export interface BuilderSidebarProps {
-  slides: BuilderSlide[]
-  activeSlideId: string | null
+export interface BuilderLayersPanelProps {
+  objects: BuilderObject[]
   tags: StratTag[]
-  icons: UploadedIcon[]
-  onSelectSlide: (slideId: string) => void
-  onAddSlide: () => void
-  onRenameSlide: (slideId: string, newName: string) => void
-  onDuplicateSlide: (slideId: string) => void
-  onDeleteSlide: (slideId: string) => void
-  onCreateTag: (name: string, color: string) => void
-  onDeleteTag: (tagId: string) => void
-  onUploadIcon: (file: File) => void
-  onDeleteIcon: (iconId: string) => void
-  onInsertIcon?: (icon: UploadedIcon) => void
+  selectedObjectId: string | null
+  filterTagIds: string[]
+  onSelectObject: (objectId: string) => void
+  onToggleVisibility: (objectId: string) => void
+  onToggleLocked: (objectId: string) => void
+  onMoveObjectUp: (objectId: string) => void
+  onMoveObjectDown: (objectId: string) => void
+  onSetFilterTagIds: (tagIds: string[]) => void
 }

@@ -5,6 +5,7 @@ import {
   BuilderObjectType,
   BuilderProject,
   BuilderSlide,
+  IconPaletteGroup,
   ObjectMetadata,
   StratTag,
   UploadedIcon,
@@ -100,7 +101,6 @@ export function createDefaultObject(
       return {
         ...base,
         type: 'arrow',
-        points: [0, 0, 160, 0],
         pointerLength: 12,
         pointerWidth: 12,
         style: createDefaultStyleProps({
@@ -152,7 +152,6 @@ export function createDefaultObject(
       return {
         ...base,
         type: 'line',
-        points: [0, 0, 160, 0],
         style: createDefaultStyleProps({
           stroke: '#f59e0b',
           strokeWidth: 3,
@@ -190,8 +189,6 @@ export function createDefaultObject(
         }),
         ...overrides,
       } as BuilderObject
-
-    
 
     default:
       return {
@@ -239,16 +236,14 @@ export function createDefaultProject(
     slides: [firstSlide],
     tags: [],
     uploadedIcons: [],
+    iconPalettes: [],
     createdAt: now,
     updatedAt: now,
     ...overrides,
   }
 }
 
-export function createDefaultTag(
-  name: string,
-  color: string
-): StratTag {
+export function createDefaultTag(name: string, color: string): StratTag {
   return {
     id: createId(),
     name,
@@ -256,10 +251,19 @@ export function createDefaultTag(
   }
 }
 
+export function createIconPaletteGroup(name: string): IconPaletteGroup {
+  return {
+    id: createId(),
+    name,
+    createdAt: getNowIso(),
+  }
+}
+
 export function createUploadedIcon(params: {
   name: string
   src: string
   fileName: string
+  paletteId?: string | null
 }): UploadedIcon {
   return {
     id: createId(),
@@ -267,6 +271,7 @@ export function createUploadedIcon(params: {
     src: params.src,
     fileName: params.fileName,
     uploadedAt: getNowIso(),
+    paletteId: params.paletteId ?? null,
   }
 }
 
@@ -278,9 +283,7 @@ export function duplicateObject(object: BuilderObject): BuilderObject {
     id: createId(),
     metadata: {
       ...object.metadata,
-      label: object.metadata.label
-        ? `${object.metadata.label} Copy`
-        : '',
+      label: object.metadata.label ? `${object.metadata.label} Copy` : '',
     },
     canvas: {
       ...object.canvas,
@@ -288,9 +291,7 @@ export function duplicateObject(object: BuilderObject): BuilderObject {
       y: object.canvas.y + 24,
       zIndex: object.canvas.zIndex + 1,
     },
-    style: {
-      ...object.style,
-    },
+    style: { ...object.style },
     createdAt: now,
     updatedAt: now,
   } as BuilderObject
@@ -303,7 +304,7 @@ export function duplicateSlide(slide: BuilderSlide): BuilderSlide {
     ...slide,
     id: createId(),
     name: `${slide.name} Copy`,
-    objects: slide.objects.map((object) => duplicateObject(object)),
+    objects: slide.objects.map((obj) => duplicateObject(obj)),
     createdAt: now,
     updatedAt: now,
   }
@@ -314,21 +315,21 @@ export function reorderSlides(
   fromIndex: number,
   toIndex: number
 ): BuilderSlide[] {
-  const nextSlides = [...slides]
+  const next = [...slides]
 
   if (
     fromIndex < 0 ||
     toIndex < 0 ||
-    fromIndex >= nextSlides.length ||
-    toIndex >= nextSlides.length
+    fromIndex >= next.length ||
+    toIndex >= next.length
   ) {
-    return nextSlides
+    return next
   }
 
-  const [movedSlide] = nextSlides.splice(fromIndex, 1)
-  nextSlides.splice(toIndex, 0, movedSlide)
+  const [moved] = next.splice(fromIndex, 1)
+  next.splice(toIndex, 0, moved)
 
-  return nextSlides
+  return next
 }
 
 export function findSlideById(
@@ -336,12 +337,49 @@ export function findSlideById(
   slideId: string | null
 ): BuilderSlide | null {
   if (!slideId) return null
-  return slides.find((slide) => slide.id === slideId) ?? null
+  return slides.find((s) => s.id === slideId) ?? null
 }
 
-export function updateSlideTimestamp(slide: BuilderSlide): BuilderSlide {
-  return {
-    ...slide,
-    updatedAt: getNowIso(),
+// file validation
+
+const ALLOWED_ICON_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+  'image/svg+xml',
+]
+
+const ALLOWED_BACKGROUND_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+]
+
+const MAX_ICON_SIZE_MB = 2
+const MAX_BACKGROUND_SIZE_MB = 5
+
+export function validateIconFile(file: File): string | null {
+  if (!ALLOWED_ICON_TYPES.includes(file.type)) {
+    return 'Invalid file type. Allowed: PNG JPG WEBP SVG'
   }
+  if (file.size > MAX_ICON_SIZE_MB * 1024 * 1024) {
+    return `File too large. Max ${MAX_ICON_SIZE_MB}MB`
+  }
+  return null
+}
+
+export function validateBackgroundFile(file: File): string | null {
+  if (!ALLOWED_BACKGROUND_TYPES.includes(file.type)) {
+    return 'Invalid file type. Allowed: PNG JPG WEBP'
+  }
+  if (file.size > MAX_BACKGROUND_SIZE_MB * 1024 * 1024) {
+    return `File too large. Max ${MAX_BACKGROUND_SIZE_MB}MB`
+  }
+  return null
+}
+
+export function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
 }
