@@ -111,85 +111,95 @@ export default function VerifyPage() {
     return () => clearInterval(timer)
   }, [resendCooldown])
 
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <div className="min-h-screen bg-[#313131] flex items-center justify-center p-4">
+      <div className="w-full max-w-sm bg-[#3d3d3d] border border-white/10 rounded-xl p-8 text-center">
+        {children}
+      </div>
+    </div>
+  )
+
   if (loading) {
     return (
-      <div className="p-4 max-w-md mx-auto text-center">
-        <p>Loading session...</p>
-      </div>
+      <Wrapper>
+        <div className="w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-5 text-2xl">⏳</div>
+        <p className="text-[#f0ede8] font-medium text-base">Loading session...</p>
+      </Wrapper>
     )
   }
 
   if (!user) {
     return (
-      <div className="p-4 max-w-md mx-auto text-center">
+      <Wrapper>
+        <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto mb-5 text-xl text-[#f0ede8]">✉</div>
         {pendingEmail ? (
-          <div>
-            <p className="text-gray-600 mb-4">
-              We sent a verification link to <strong>{pendingEmail}</strong>
-            </p>
-            <p className="text-gray-500 text-sm mb-6">
-              Didn't receive it? Check your spam folder or resend below.
-            </p>
+          <>
+            <p className="text-[#f0ede8] font-medium text-base mb-2">Check your inbox</p>
+            <p className="text-[#a09d99] text-sm mb-1">We sent a verification link to</p>
+            <p className="text-[#d4d1cc] text-sm font-medium mb-3">{pendingEmail}</p>
+            <p className="text-[#7a7773] text-xs mb-6">Didn't receive it? Check your spam folder or resend below.</p>
             <button
               onClick={resendEmail}
               disabled={resendCooldown > 0}
-              className="bg-[#313131] hover:bg-[#444444] text-white font-bold py-2 px-4 rounded w-full disabled:opacity-50"
+              className="w-full py-2.5 bg-[#f0ede8] text-[#313131] font-medium rounded-lg text-sm disabled:opacity-50 hover:bg-white transition-colors"
             >
-              {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Verification Email'}
+              {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend verification email'}
             </button>
-          </div>
+          </>
         ) : (
-          <div>
-            <p className="text-red-600 mb-4">No user found. Please sign up first.</p>
+          <>
+            <p className="text-[#f0ede8] font-medium text-base mb-2">No session found</p>
+            <p className="text-[#a09d99] text-sm mb-6">Please sign up first.</p>
             <button
               onClick={() => router.push('/registration')}
-              className="bg-[#313131] hover:bg-[#444444] text-white font-bold py-2 px-4 rounded w-full"
+              className="w-full py-2.5 bg-[#f0ede8] text-[#313131] font-medium rounded-lg text-sm hover:bg-white transition-colors"
             >
-              Go to Sign Up
+              Go to sign up
             </button>
-          </div>
+          </>
         )}
-      </div>
+      </Wrapper>
     )
   }
 
   const isVerified = !!user.email_confirmed_at
 
+  if (!isVerified) {
+    return (
+      <Wrapper>
+        <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto mb-5 text-2xl text-[#f0ede8]">✉</div>
+        <p className="text-[#f0ede8] font-medium text-lg mb-2">Check your inbox</p>
+        <p className="text-[#a09d99] text-sm mb-1">We sent a verification link to</p>
+        <p className="text-[#d4d1cc] text-sm font-medium mb-3">{user.email}</p>
+        <p className="text-[#7a7773] text-xs mb-6">Open the link on this device, then press "Check status" below.</p>
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={checkStatus}
+            className="w-full py-2.5 bg-[#f0ede8] text-[#313131] font-medium rounded-lg text-sm hover:bg-white transition-colors"
+          >
+            Check status
+          </button>
+          <button
+            onClick={resendEmail}
+            disabled={resendCooldown > 0}
+            className="w-full py-2.5 bg-transparent text-[#a09d99] border border-white/15 rounded-lg text-sm disabled:opacity-50 hover:bg-white/5 transition-colors"
+          >
+            {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend verification email'}
+          </button>
+        </div>
+      </Wrapper>
+    )
+  }
+
   return (
-    <div className="p-4 max-w-md mx-auto text-center">
-      {isVerified ? (
-        <div>
-          <p className="text-green-600 font-bold text-lg mb-4">✅ Email verified!</p>
-          {checkingProfile && <p className="text-gray-600">Setting up your profile...</p>}
-          {profileCreated && <p className="text-gray-600">Redirecting to dashboard...</p>}
-          {!checkingProfile && !profileCreated && <p className="text-gray-600">Preparing your account...</p>}
-        </div>
-      ) : (
-        <div>
-          <p className="text-red-600 font-bold mb-4">❌ Your email is not verified yet.</p>
-          <p className="text-gray-600 mb-4">
-            We sent a verification link to <strong>{user.email}</strong>
-          </p>
-          <p className="text-gray-500 text-sm mb-6">
-            Click the link in the email, then come back here and press "Check Status".
-          </p>
-          <div className="space-y-3">
-            <button
-              onClick={checkStatus}
-              className="bg-[#313131] hover:bg-[#444444] text-white font-bold py-2 px-4 rounded w-full"
-            >
-              Check Status
-            </button>
-            <button
-              onClick={resendEmail}
-              disabled={resendCooldown > 0}
-              className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded w-full disabled:opacity-50"
-            >
-              {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Verification Email'}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+    <Wrapper>
+      <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto mb-5 text-2xl text-[#f0ede8]">✓</div>
+      <p className="text-[#f0ede8] font-medium text-lg mb-2">Email verified!</p>
+      <p className="text-[#a09d99] text-sm">
+        {checkingProfile && 'Setting up your profile...'}
+        {profileCreated && 'Redirecting to dashboard...'}
+        {!checkingProfile && !profileCreated && 'Preparing your account...'}
+      </p>
+    </Wrapper>
   )
 }
