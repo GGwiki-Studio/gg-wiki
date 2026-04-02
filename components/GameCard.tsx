@@ -26,6 +26,11 @@ const GameCard = ({ gameSlug, name, thumbnailUrl, members }: GameCardProps) => {
         router.push("/registration");
         return;
         }
+        else if (user && !user.email_confirmed_at) {
+        e.preventDefault();
+        router.push("/verify");
+        return;
+        }
         setJoined(!joined)
         return;
     }
