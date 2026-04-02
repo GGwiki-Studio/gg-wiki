@@ -15,19 +15,28 @@ export default function VerifyPage() {
 
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem('pendingVerificationEmail') || 'null')
-    if( Date.now() - stored.timestamp > 3600000) {
+    if (stored && Date.now() - stored.timestamp > 3600000) {
       localStorage.removeItem('pendingVerificationEmail')
-    }
-    else if (stored && stored.email) {
+    } else if (stored && stored.email) {
       setPendingEmail(stored.email)
     }
   }, [])
 
   useEffect(() => {
-    client.auth.getSession().then(({ data: { session } }) => {
+    const init = async () => {
+      // Cross-platform: exchange code from URL if present
+      const code = new URLSearchParams(window.location.search).get('code')
+      if (code) {
+        const { error } = await client.auth.exchangeCodeForSession(code)
+        if (error) console.error('Code exchange failed:', error)
+      }
+
+      const { data: { session } } = await client.auth.getSession()
       setUser(session?.user || null)
       setLoading(false)
-    })
+    }
+
+    init()
 
     const { data: listener } = client.auth.onAuthStateChange((event, session) => {
       setUser(session?.user || null)
