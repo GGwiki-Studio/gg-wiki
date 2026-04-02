@@ -14,20 +14,20 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const { data: authListener } = client.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+      setLoading(false);
+    });
+
     client.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user || null);
       setLoading(false);
-    })
-
-    const { data: authListener } = client.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
-    })
+    });
 
     return () => {
       authListener.subscription.unsubscribe();
-    }
-
-  }, [])
+    };
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
