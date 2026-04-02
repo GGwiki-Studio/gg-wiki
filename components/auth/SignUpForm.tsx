@@ -16,6 +16,7 @@ import { toast } from "sonner"
 import { client } from "@/api/client"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { time } from "console"
 
 const formSchema = z.object({
   email: z.string().min(1, { message: "Email is required" }),
@@ -68,7 +69,10 @@ const SignUpForm = () => {
       if (authError) throw authError
 
       if (authData.user) {
-        localStorage.setItem('pendingVerificationEmail', email)
+        localStorage.setItem('pendingVerificationEmail', JSON.stringify({
+          email,
+          timestamp: Date.now(),
+        }))
         toast.success("Account created successfully! Please check your email to verify your account.")
         router.push("/verify")
       }

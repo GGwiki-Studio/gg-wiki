@@ -14,8 +14,13 @@ export default function VerifyPage() {
   const [pendingEmail, setPendingEmail] = useState<string | null>(null)
 
   useEffect(() => {
-    const stored = localStorage.getItem('pendingVerificationEmail')
-    if (stored) setPendingEmail(stored)
+    const stored = JSON.parse(localStorage.getItem('pendingVerificationEmail') || 'null')
+    if( Date.now() - stored.timestamp > 3600000) {
+      localStorage.removeItem('pendingVerificationEmail')
+    }
+    else if (stored && stored.email) {
+      setPendingEmail(stored.email)
+    }
   }, [])
 
   useEffect(() => {
@@ -63,6 +68,7 @@ export default function VerifyPage() {
       } catch (error) {
         console.error('Profile creation error:', error)
         toast.error('Error setting up your profile. Please contact support.')
+        localStorage.removeItem('pendingVerificationEmail')
       } finally {
         setCheckingProfile(false)
       }
