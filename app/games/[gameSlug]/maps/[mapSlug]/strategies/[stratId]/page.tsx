@@ -106,6 +106,10 @@ const StrategyPage = () => {
             toast.error('Please sign in to vote')
             return
         }
+        else if (user && !user.email_confirmed_at) {
+            toast.error('Please verify your email to vote')
+            return
+        }
 
         try {
             const result = await likeStrat(stratId, user.id, newVoteType)
@@ -125,6 +129,10 @@ const StrategyPage = () => {
     const handleAddComment = async () => {
         if (!user) {
             toast.error('Please sign in to comment')
+            return
+        }
+        else if (user && !user.email_confirmed_at) {
+            toast.error('Please verify your email to comment')
             return
         }
 

@@ -25,6 +25,12 @@ const Navitems = () => {
       toast.error("You must be logged in to access this page.");
       return;
     }
+    else if (protectedItem && user && !user.email_confirmed_at) {
+      e.preventDefault();
+      router.push("/verify");
+      toast.error("You must verify your email to access this page.");
+      return;
+    }
   }
 
   const getHref = (item: typeof navItems[0]) => {

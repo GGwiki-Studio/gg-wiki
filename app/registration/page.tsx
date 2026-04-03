@@ -11,8 +11,11 @@ const page = () => {
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && user && user.email_confirmed_at) {
       router.push(`/dashboard/${user.id}`)
+    }
+    else if (!loading && user && !user.email_confirmed_at) {
+      router.push("/verify")
     }
   }, [loading, user, router])
 
