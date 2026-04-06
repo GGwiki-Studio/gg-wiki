@@ -1,481 +1,216 @@
 'use client'
-import { client } from "@/api/client"
-import { toast } from "sonner";
 
+import { client } from '@/api/client'
+import { getProject } from './project.actions'
+import { copyAssetToStrat, deleteStratAssets } from '@/lib/storage/strat-storage'
+import type { StratSlideData, StratEntity, StratListItem } from '@/components/strat-viewer/strat.types'
+import type { BuilderSlide } from '@/components/builder/builder.types'
+import type { StratTag, UploadedIcon } from '@/components/builder/builder.types'
+import { CURRENT_SCHEMA_VERSION } from '@/lib/schema/builder/schema-migration'
 
-interface CreateStrat {
-    title: string;
-    game: string;
-    map: string;
-    tags: string[];
-    difficulty: "Easy" | "Medium" | "Hard";
-    content: string;
+interface ActionResult<T> {
+  data: T | null
+  error: string | null
 }
 
-interface GetAllStratsParams {
-    limit?: number
-    map?: string
-    topic?: string | string[]
-    gameSlug?: string
-}
-
-interface FormattedStrat {
-    id: string
-    title: string
-    thumbnailUrl: string
-    view_count: number
-    created_at: string
-    author: string
-    gameName: string
-    mapName: string
-}
-
-export const createStrat = async (formData: CreateStrat, author: any) => {
-    const gameID = (await client.from("games").select("id").eq("slug", formData.game).single()).data
-    const mapId = (await client.from("maps").select("id").eq("slug", formData.map).single()).data
-
-    const tagIds = await Promise.all(
-        formData.tags.map(async (tagName) => {
-            const { data: existingTag } = await client
-                .from("tags")
-                .select("id")
-                .eq("name", tagName)
-                .maybeSingle()
-
-            if (existingTag) {
-                return existingTag.id
-            }
-        }
-    ))
-
-    if (!gameID) {
-        throw new Error("Game not found")
-    }
-
-    if (!mapId) {
-        throw new Error("Map not found")
-    }
-
-    const { data, error } = await client
-        .from("strategies")
-        .insert({
-            title: formData.title,
-            game_id: gameID.id,
-            map_id: mapId.id,
-            difficulty: formData.difficulty,
-            content: formData.content,
-            user_id: author,
-        })
-        .select()
-        .single()
-    
-    
-    if (error || !data) {
-        throw new Error(error?.message || "Failed to create strat")
-    }
-
-    if (tagIds.length > 0) {
-        const { error: tagAssociationError } = await client
-            .from("strategy_tags")
-            .insert(
-                tagIds.map(tagId => ({
-                    strategy_id: data.id,
-                    tag_id: tagId
-                }))
-            )
-
-        if (tagAssociationError) {
-            console.error("Failed to associate tags:", tagAssociationError)
-        }
-    }
-
-    return data
-}
-
-export const getStrat = async (stratId: string) => {
-    // Fetch the strategy itself (with author + game + map)
-    const { data: stratData, error: stratError } = await client
-        .from('strategies')
-        .select(`
-            id,
-            title,
-            content,
-            difficulty,
-            view_count,
-            created_at,
-            strat_url,
-            user:user_id (
-                id,
-                username
-            ),
-            game:game_id (
-                name,
-                slug
-            ),
-            map:map_id (
-                name,
-                slug
-            )
-        `)
-        .eq('id', stratId)
-        .single()
-
-    if (stratError || !stratData) {
-        throw new Error(stratError?.message || "Strategy not found")
-    }
-
-    // Fetch tags separately to avoid relationship mismatch errors if the foreign key relation isn't configured.
-    const { data: tagData, error: tagError } = await client
-        .from('strategy_tags')
-        .select(`
-            tag:tag_id (
-                name
-            )
-        `)
-        .eq('strategy_id', stratId)
-
-    if (tagError) {
-        console.warn('Failed to load strategy tags:', tagError)
-    }
-
-    // Count votes separately since the strategies table does not have votes_count
-    const { count: votesCount, error: votesCountError } = await client
-        .from('votes')
-        .select('id', { count: 'exact', head: true })
-        .eq('strategy_id', stratId)
-        .eq('vote_type', 1)
-
-    if (votesCountError) {
-        console.warn('Failed to count strategy votes:', votesCountError)
-    }
-
-    return {
-        ...stratData,
-        user: Array.isArray(stratData.user) ? stratData.user[0] : stratData.user,
-        game: Array.isArray(stratData.game) ? stratData.game[0] : stratData.game,
-        map: Array.isArray(stratData.map) ? stratData.map[0] : stratData.map,
-        likes_count: votesCount ?? 0,
-        tags: Array.isArray(tagData) ? tagData.map((st: any) => st.tag?.name).filter(Boolean) : []
-    }
-}
-
-export const incrementViewCount = async (stratId: string) => {
-    const { error } = await client.rpc('increment_view_count', { strategy_id: stratId })
-
-    if (error) {
-        console.warn('Failed to increment view count:', error)
-        // Fallback: try to increment manually
-        const { data: currentStrat } = await client
-            .from('strategies')
-            .select('view_count')
-            .eq('id', stratId)
-            .single()
-
-        if (currentStrat) {
-            const { error: updateError } = await client
-                .from('strategies')
-                .update({ view_count: (currentStrat.view_count || 0) + 1 })
-                .eq('id', stratId)
-
-            if (updateError) {
-                console.error('Failed to increment view count manually:', updateError)
-            }
-        }
-    }
-}
-
-export const likeStrat = async (stratId: string, userId: string, voteType: 'upvote' | 'downvote' = 'upvote') => {
-    const voteValue = voteType === 'upvote' ? 1 : -1
-
-    // First check if user already voted on this strategy
-    const { data: existingVote } = await client
-        .from('votes')
-        .select('id, vote_type')
-        .eq('strategy_id', stratId)
-        .eq('user_id', userId)
-        .maybeSingle()
-
-    if (existingVote) {
-        if (existingVote.vote_type === voteValue) {
-            // Remove vote (unvote)
-            const { error: deleteError } = await client
-                .from('votes')
-                .delete()
-                .eq('id', existingVote.id)
-
-            if (deleteError) throw deleteError
-
-            // Recount upvotes
-            const { count: newCount, error: countError } = await client
-                .from('votes')
-                .select('id', { count: 'exact', head: true })
-                .eq('strategy_id', stratId)
-                .eq('vote_type', 1)
-
-            if (countError) throw countError
-
-            return { voted: false, voteType: null, votesCount: newCount ?? 0 }
-        } else {
-            // Change vote type (upvote to downvote or vice versa)
-            const { error: updateError } = await client
-                .from('votes')
-                .update({ vote_type: voteValue })
-                .eq('id', existingVote.id)
-
-            if (updateError) throw updateError
-
-            // Recount upvotes
-            const { count: newCount, error: countError } = await client
-                .from('votes')
-                .select('id', { count: 'exact', head: true })
-                .eq('strategy_id', stratId)
-                .eq('vote_type', 1)
-
-            if (countError) throw countError
-
-            return { voted: true, voteType, votesCount: newCount ?? 0 }
-        }
-    } else {
-        // Add new vote
-        const { error: insertError } = await client
-            .from('votes')
-            .insert({
-                strategy_id: stratId,
-                user_id: userId,
-                vote_type: voteValue
-            })
-
-        if (insertError) throw insertError
-
-        // Recount upvotes
-        const { count: newCount, error: countError } = await client
-            .from('votes')
-            .select('id', { count: 'exact', head: true })
-            .eq('strategy_id', stratId)
-            .eq('vote_type', 1)
-
-        if (countError) throw countError
-
-        return { voted: true, voteType, votesCount: newCount ?? 0 }
-    }
-}
-
-export const getComments = async (stratId: string) => {
-    const { data, error } = await client
-        .from('comments')
-        .select(`
-            id,
-            content,
-            created_at,
-            parent_id,
-            user:user_id (
-                username
-            )
-        `)
-        .eq('strategy_id', stratId)
-        .order('created_at', { ascending: true })
-
-    if (error) throw error
-
-    // Fix user relationship arrays
-    return (data || []).map(comment => ({
-        ...comment,
-        user: Array.isArray(comment.user) ? comment.user[0] : comment.user
-    }))
-}
-
-export const addComment = async (stratId: string, userId: string, content: string) => {
-    const { data, error } = await client
-        .from('comments')
-        .insert({
-            strategy_id: stratId,
-            user_id: userId,
-            content,
-            parent_id: null
-        })
-        .select(`
-            id,
-            content,
-            created_at,
-            parent_id,
-            user:user_id (
-                username
-            )
-        `)
-        .single()
-
-    if (error || !data) {
-        throw new Error(error?.message || "Failed to add comment")
-    }
-
-    return {
-        ...data,
-        user: Array.isArray(data.user) ? data.user[0] : data.user
-    }
-}
-
-export const getAllStrats = async ({ limit = 0, map, topic, gameSlug }: GetAllStratsParams): Promise<FormattedStrat[]> => {
-  try {
-    let gameId: string | undefined
-    if (gameSlug) {
-      const { data: gameData } = await client
-        .from('games')
-        .select('id')
-        .eq('slug', gameSlug)
-        .single()
-
-      if (gameData) gameId = gameData.id
-    }
-
-    let mapId: string | undefined
-    if (map && map !== 'all') {
-      const { data: mapData } = await client
-        .from('maps')
-        .select('id')
-        .eq('slug', map)
-        .single()
-
-      if (mapData) mapId = mapData.id
-    }
-
-    const topicString =
-      typeof topic === 'string'
-        ? topic
-        : Array.isArray(topic)
-        ? topic.join(' ')
-        : ''
-
-    const searchWords = topicString.trim().split(/\s+/).filter(Boolean)
-
-    let strategyIdsByTag: string[] = []
-    if (searchWords.length) {
-      const { data: matchingTags } = await client
-        .from('tags')
-        .select('id')
-        .or(searchWords.map((w: string) => `name.ilike.%${w}%`).join(','))
-
-      if (matchingTags?.length) {
-        const tagIds = matchingTags.map(t => t.id)
-
-        const { data: stratTags } = await client
-          .from('strategy_tags')
-          .select('strategy_id')
-          .in('tag_id', tagIds)
-
-        strategyIdsByTag = stratTags?.map(st => st.strategy_id) || []
-      }
-    }
-
-    let gameIdsBySearch: string[] = []
-    if (searchWords.length) {
-      const { data: matchingGames } = await client
-        .from('games')
-        .select('id')
-        .or(searchWords.map((w: string) => `name.ilike.%${w}%`).join(','))
-
-      gameIdsBySearch = matchingGames?.map(g => g.id) || []
-    }
-
-    let mapIdsBySearch: string[] = []
-    if (searchWords.length) {
-      const { data: matchingMaps } = await client
-        .from('maps')
-        .select('id')
-        .or(searchWords.map((w: string) => `name.ilike.%${w}%`).join(','))
-
-      mapIdsBySearch = matchingMaps?.map(m => m.id) || []
-    }
-
-    let userIdsBySearch: string[] = []
-    if (searchWords.length) {
-      const { data: matchingUsers } = await client
-        .from('profiles')
-        .select('id')
-        .or(searchWords.map((w: string) => `username.ilike.%${w}%`).join(','))
-
-    userIdsBySearch = matchingUsers?.map(u => u.id) || []
-    }
-
-    let query = client
-      .from('strategies')
-      .select(`
-        id,
-        title,
-        thumbnail_url,
-        view_count,
-        created_at,
-        user:user_id ( username ),
-        game:game_id ( name ),
-        map:map_id ( name )
-      `)
-      .order('view_count', { ascending: false })
-
-    if (gameId) query = query.eq('game_id', gameId)
-    if (mapId) query = query.eq('map_id', mapId)
-
-    if (searchWords.length) {
-      const filters: string[] = []
-
-      searchWords.forEach((w: string) => {
-        filters.push(`title.ilike.%${w}%`)
-        filters.push(`content.ilike.%${w}%`)
-      })
-
-      if (strategyIdsByTag.length) {
-        filters.push(`id.in.(${strategyIdsByTag.join(',')})`)
-      }
-
-      if (gameIdsBySearch.length) {
-        filters.push(`game_id.in.(${gameIdsBySearch.join(',')})`)
-      }
-
-      if (mapIdsBySearch.length) {
-        filters.push(`map_id.in.(${mapIdsBySearch.join(',')})`)
-      }
-
-      if (userIdsBySearch.length) {
-        filters.push(`user_id.in.(${userIdsBySearch.join(',')})`)
-      }
-
-      query = query.or(filters.join(','))
-    }
-
-    if (limit && limit > 0) query = query.limit(limit)
-
-    const { data, error } = await query
-    if (error || !data) return []
-
-    const formatDate = (timestamp: string) => {
-      const date = new Date(timestamp)
-      const day = date.getDate().toString().padStart(2, '0')
-      const month = (date.getMonth() + 1).toString().padStart(2, '0')
-      const year = date.getFullYear()
-      const hours = date.getHours().toString().padStart(2, '0')
-      const minutes = date.getMinutes().toString().padStart(2, '0')
-      return `${day}/${month}/${year} ${hours}:${minutes}`
-    }
-
-    return data.map((strat: any) => ({
-      id: strat.id,
-      title: strat.title,
-      thumbnailUrl: strat.thumbnail_url,
-      view_count: strat.view_count || 0,
-      created_at: formatDate(strat.created_at),
-      author:
-        Array.isArray(strat.user)
-          ? strat.user[0]?.username
-          : strat.user?.username || 'Unknown',
-      gameName:
-        Array.isArray(strat.game)
-          ? strat.game[0]?.name
-          : strat.game?.name || 'Unknown',
-      mapName:
-        Array.isArray(strat.map)
-          ? strat.map[0]?.name
-          : strat.map?.name || 'Unknown'
-    }))
-  } catch (err) {
-    console.error('Error fetching strategies:', err)
-    return []
+// Helpers
+
+function toStratListItem(row: Record<string, unknown>): StratListItem {
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    visibility: row.visibility as 'private' | 'public',
+    savedFromFeed: row.saved_from_feed as boolean,
+    forkedFromId: (row.forked_from_id as string) || null,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
   }
+}
+
+function toStratEntity(row: Record<string, unknown>): StratEntity {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    title: row.title as string,
+    slideData: row.slide_data as StratSlideData,
+    schemaVersion: row.schema_version as number,
+    visibility: row.visibility as 'private' | 'public',
+    savedFromFeed: row.saved_from_feed as boolean,
+    forkedFromId: (row.forked_from_id as string) || null,
+    originalAuthorId: (row.original_author_id as string) || null,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  }
+}
+
+// Build self-contained slide data with only referenced tags and icons
+function buildSlideData(
+  slide: BuilderSlide,
+  allTags: StratTag[],
+  allIcons: UploadedIcon[]
+): StratSlideData {
+  const usedTagIds = new Set<string>()
+  const usedIconIds = new Set<string>()
+
+  for (const obj of slide.objects) {
+    obj.metadata.tagIds.forEach((id) => usedTagIds.add(id))
+    if (obj.type === 'icon') usedIconIds.add(obj.iconId)
+  }
+
+  return {
+    slide: structuredClone(slide),
+    tags: allTags.filter((t) => usedTagIds.has(t.id)),
+    icons: allIcons.filter((i) => usedIconIds.has(i.id)),
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+  }
+}
+
+// Replace project-assets URLs with strat-assets URLs in slide data
+async function copySlideAssets(
+  slideData: StratSlideData,
+  userId: string,
+  stratId: string
+): Promise<StratSlideData> {
+  const updated = structuredClone(slideData)
+
+  // Copy background image
+  if (updated.slide.backgroundImage && updated.slide.backgroundImage.startsWith('http')) {
+    const { url } = await copyAssetToStrat(updated.slide.backgroundImage, userId, stratId)
+    if (url) updated.slide.backgroundImage = url
+  }
+
+  // Copy icon srcs
+  for (const icon of updated.icons) {
+    if (icon.src.startsWith('http')) {
+      const { url } = await copyAssetToStrat(icon.src, userId, stratId)
+      if (url) icon.src = url
+    }
+  }
+
+  // Copy image/icon object srcs
+  for (const obj of updated.slide.objects) {
+    if ((obj.type === 'image' || obj.type === 'icon') && obj.src.startsWith('http')) {
+      const { url } = await copyAssetToStrat(obj.src, userId, stratId)
+      if (url) obj.src = url
+    }
+  }
+
+  return updated
+}
+
+// Actions
+
+export async function extractStrat(
+  userId: string,
+  projectId: string,
+  slideId: string,
+  title?: string
+): Promise<ActionResult<StratListItem>> {
+  // Fetch the project
+  const { data: project, error: projectError } = await getProject(projectId, userId)
+  if (projectError || !project) return { data: null, error: projectError || 'Project not found' }
+
+  const projectData = project.projectData
+  const slide = projectData.slides.find((s) => s.id === slideId)
+  if (!slide) return { data: null, error: 'Slide not found' }
+
+  // Build self-contained slide data
+  const slideData = buildSlideData(slide, projectData.tags, projectData.uploadedIcons)
+
+  // Insert strat first to get the ID
+  const { data: row, error: insertError } = await client
+    .from('strats')
+    .insert({
+      user_id: userId,
+      title: title || slide.name || 'Untitled Strat',
+      slide_data: slideData,
+      schema_version: CURRENT_SCHEMA_VERSION,
+    })
+    .select('*')
+    .single()
+
+  if (insertError || !row) return { data: null, error: insertError?.message || 'Failed to create strat' }
+
+  // Copy assets to strat-assets bucket so strat is independent
+  const copiedSlideData = await copySlideAssets(slideData, userId, row.id)
+
+  // Update with copied asset URLs
+  const { error: updateError } = await client
+    .from('strats')
+    .update({ slide_data: copiedSlideData })
+    .eq('id', row.id)
+    .eq('user_id', userId)
+
+  if (updateError) return { data: null, error: updateError.message }
+
+  return { data: toStratListItem(row), error: null }
+}
+
+export async function extractStrats(
+  userId: string,
+  projectId: string,
+  slideIds: string[]
+): Promise<ActionResult<StratListItem[]>> {
+  const results: StratListItem[] = []
+  const errors: string[] = []
+
+  for (const slideId of slideIds) {
+    const { data, error } = await extractStrat(userId, projectId, slideId)
+    if (error) {
+      errors.push(error)
+    } else if (data) {
+      results.push(data)
+    }
+  }
+
+  if (results.length === 0 && errors.length > 0) {
+    return { data: null, error: errors[0] }
+  }
+
+  return { data: results, error: null }
+}
+
+export async function getUserStrats(
+  userId: string
+): Promise<ActionResult<StratListItem[]>> {
+  const { data, error } = await client
+    .from('strats')
+    .select('id, title, visibility, saved_from_feed, forked_from_id, created_at, updated_at')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+
+  if (error) return { data: null, error: error.message }
+  return { data: (data || []).map(toStratListItem), error: null }
+}
+
+export async function getStrat(
+  stratId: string,
+  userId: string
+): Promise<ActionResult<StratEntity>> {
+  const { data, error } = await client
+    .from('strats')
+    .select('*')
+    .eq('id', stratId)
+    .eq('user_id', userId)
+    .single()
+
+  if (error) return { data: null, error: error.message }
+  return { data: toStratEntity(data), error: null }
+}
+
+export async function deleteStrat(
+  stratId: string,
+  userId: string
+): Promise<ActionResult<{ id: string }>> {
+  // Delete assets from storage
+  await deleteStratAssets(userId, stratId)
+
+  const { error } = await client
+    .from('strats')
+    .delete()
+    .eq('id', stratId)
+    .eq('user_id', userId)
+
+  if (error) return { data: null, error: error.message }
+  return { data: { id: stratId }, error: null }
 }

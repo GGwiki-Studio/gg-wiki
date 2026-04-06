@@ -1,6 +1,6 @@
 'use client'
 
-import { ChangeEvent, useRef, useState } from 'react'
+import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { Check, Copy, ImagePlus, Plus, Trash2, X } from 'lucide-react'
 
 import { BuilderSlideStripProps } from './builder.types'
@@ -9,17 +9,40 @@ const BuilderSlideStrip = ({
   slides,
   activeSlideId,
   activeSlide,
+
   onSelectSlide,
   onAddSlide,
   onRenameSlide,
   onDuplicateSlide,
   onDeleteSlide,
+
   onUploadBackground,
   onClearBackground,
+
+  selectedSlideIds = [],
+  onToggleSlideSelect,
+
+  onExtractSlides,
+  extractDialogOpen,
 }: BuilderSlideStripProps) => {
   const [editingSlideId, setEditingSlideId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const stripRef = useRef<HTMLDivElement | null>(null)
+
+  // Clear selection action when clicking outside the slide strip
+  useEffect(() => {
+    if (selectedSlideIds.length === 0 || extractDialogOpen) return
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (stripRef.current && !stripRef.current.contains(e.target as Node)) {
+        onToggleSlideSelect?.('__clear__')
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [selectedSlideIds.length, onToggleSlideSelect])
 
   const startRename = (slideId: string, currentName: string) => {
     setEditingSlideId(slideId)
@@ -45,8 +68,18 @@ const BuilderSlideStrip = ({
     e.target.value = ''
   }
 
+  const handleSlideClick = (slideId: string, e: React.MouseEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      onToggleSlideSelect?.(slideId)
+      return
+    }
+    onSelectSlide(slideId)
+  }
+
+  const isSelected = (slideId: string) => selectedSlideIds.includes(slideId)
+
   return (
-    <div className="flex h-auto min-h-[36px] flex-wrap items-center gap-x-1 gap-y-1 border-b border-[#1f1f1f] bg-[#111111] px-3 py-1.5">
+    <div ref={stripRef} className="flex h-auto min-h-[36px] flex-wrap items-center gap-x-1 gap-y-1 border-b border-[#1f1f1f] bg-[#111111] px-3 py-1.5">
       <span className="mr-1 shrink-0 text-[10px] font-medium uppercase tracking-widest text-[#666]">
         Slides
       </span>
@@ -54,6 +87,7 @@ const BuilderSlideStrip = ({
       {slides.map((slide, index) => {
         const isActive = slide.id === activeSlideId
         const isEditing = slide.id === editingSlideId
+        const selected = isSelected(slide.id)
 
         if (isEditing) {
           return (
@@ -91,15 +125,18 @@ const BuilderSlideStrip = ({
           <button
             key={slide.id}
             type="button"
-            onClick={() => onSelectSlide(slide.id)}
+            onClick={(e) => handleSlideClick(slide.id, e)}
             onDoubleClick={() => startRename(slide.id, slide.name)}
-            title={`${slide.name} — double-click to rename`}
+            title={`${slide.name} — double-click to rename, Ctrl+click to select for extraction`}
             className={`group flex h-7 items-center gap-1.5 rounded border px-2.5 text-xs transition ${
-              isActive
-                ? 'border-[#2d5a9e] bg-[#0d1829] text-[#6ba3e0]'
-                : 'border-[#2a2a2a] bg-[#1a1a1a] text-[#888] hover:border-[#444] hover:text-[#ccc]'
+              selected
+                ? 'border-[#e8c4c0] bg-[#2a1f1e] text-[#e8c4c0]'
+                : isActive
+                  ? 'border-[#2d5a9e] bg-[#0d1829] text-[#6ba3e0]'
+                  : 'border-[#2a2a2a] bg-[#1a1a1a] text-[#888] hover:border-[#444] hover:text-[#ccc]'
             }`}
           >
+            {selected && <Check size={10} className="shrink-0" />}
             <span className="text-[10px] opacity-50">{index + 1}</span>
             <span className="max-w-[120px] truncate">{slide.name}</span>
           </button>
@@ -114,6 +151,21 @@ const BuilderSlideStrip = ({
         <Plus size={11} />
         Add
       </button>
+
+      {/* Always visible extract button */}
+      {onExtractSlides && (
+        <button
+          type="button"
+          onClick={() => onExtractSlides(selectedSlideIds)}
+          className={`flex h-7 items-center gap-1.5 rounded border px-2.5 text-xs transition ${
+            selectedSlideIds.length > 0
+              ? 'border-[#e8c4c0]/30 bg-[#2a1f1e] text-[#e8c4c0] hover:border-[#e8c4c0]/60 hover:bg-[#3a2a28]'
+              : 'border-[#2a2a2a] bg-[#1a1a1a] text-[#666] hover:border-[#444] hover:text-[#888]'
+          }`}
+        >
+          Extract ({selectedSlideIds.length})
+        </button>
+      )}
 
       {activeSlide && (
         <div className="ml-auto flex items-center gap-1">

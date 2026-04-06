@@ -163,13 +163,21 @@ export interface BuilderSlideStripProps {
   slides: BuilderSlide[]
   activeSlideId: string | null
   activeSlide: BuilderSlide | null
+  
   onSelectSlide: (slideId: string) => void
   onAddSlide: () => void
   onRenameSlide: (slideId: string, newName: string) => void
   onDuplicateSlide: (slideId: string) => void
   onDeleteSlide: (slideId: string) => void
+
   onUploadBackground: (file: File) => void
   onClearBackground: () => void
+
+  selectedSlideIds?: string[]
+  onToggleSlideSelect?: (slideId: string) => void
+
+  onExtractSlides?: (slideIds: string[]) => void
+  extractDialogOpen?: boolean
 }
 
 export interface BuilderToolsBarProps {

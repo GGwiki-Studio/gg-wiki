@@ -304,7 +304,11 @@ export function duplicateSlide(slide: BuilderSlide): BuilderSlide {
     ...slide,
     id: createId(),
     name: `${slide.name} Copy`,
-    objects: slide.objects.map((obj) => duplicateObject(obj)),
+    objects: slide.objects.map((obj) => ({
+      ...duplicateObject(obj),
+      canvas: { ...obj.canvas, zIndex: obj.canvas.zIndex },
+      metadata: { ...obj.metadata },
+    } as BuilderObject)),
     createdAt: now,
     updatedAt: now,
   }

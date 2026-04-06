@@ -6,6 +6,9 @@ import { convertBase64ToStorageUrls } from './builder.storage-utils'
 import { CURRENT_SCHEMA_VERSION } from '@/lib/schema/builder/schema-migration'
 import { uploadBase64Asset } from '@/lib/storage/project-storage'
 
+import { extractStrats } from '@/lib/actions/strat.actions'
+import ExtractConfirmDialog from './ExtractConfirmDialog'
+
 import { client } from '@/api/client'
 
 import {
@@ -183,8 +186,12 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
 
   const [isSaving, setIsSaving] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  const skipDirtyRef = useRef(false)
 
+  const [selectedSlideIds, setSelectedSlideIds] = useState<string[]>([])
+  const [extractOpen, setExtractOpen] = useState(false)
+  const [extractLoading, setExtractLoading] = useState(false)
+
+  const skipDirtyRef = useRef(false) 
   const stageRef = useRef<Konva.Stage | null>(null)
   const transformerRef = useRef<Konva.Transformer | null>(null)
   const objectNodeMapRef = useRef<Record<string, Konva.Node | null>>({})
@@ -334,6 +341,7 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
     }
     setIsSaving(false)
   }, [project, projectId, userId, isSaving])
+
   // Autosave every 10 minutes if there are unsaved changes
   useEffect(() => {
     if (!projectId || !userId) return
@@ -346,8 +354,50 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
 
     return () => clearInterval(interval)
   }, [projectId, userId, hasUnsavedChanges, isSaving, handleSave])
+  //prevents refreshing before saving
+  useEffect(() => {
+    if (!hasUnsavedChanges) return
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
 
-  // slide actions — uses setProject directly so switching slides doesn't mark dirty
+  // EXTRACTION HANDLERS
+  const handleToggleSlideSelect = (slideId: string) => {
+    if (slideId === '__clear__') {//leave selection tool
+      setSelectedSlideIds([])
+      return
+    }
+    setSelectedSlideIds((prev) =>
+      prev.includes(slideId) ? prev.filter((id) => id !== slideId) : [...prev, slideId]
+    )
+  }
+  
+  const handleExtractSlides = (slideIds: string[]) => {
+    setSelectedSlideIds(slideIds)
+    setExtractOpen(true)
+  }
+
+  const handleExtractConfirm = async () => {
+    if (!projectId || !userId) return
+    setExtractLoading(true)
+    const { data, error } = await extractStrats(userId, projectId, selectedSlideIds)
+    if (error) {
+      toast.error('Failed to extract strats')
+    } else if (data) {
+      toast.success(`${data.length} strat${data.length > 1 ? 's' : ''} extracted to dashboard`)
+      setSelectedSlideIds([])
+      setExtractOpen(false)
+    }
+    setExtractLoading(false)
+  }
+
+
+  //SLIDE HANDLERS
+
+  // setProject is used directly so switching slides doesn't mark dirty for save
   const handleSelectSlide = (slideId: string) => {
     setSelectedObjectId(null)
 
@@ -402,6 +452,7 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
         prev.activeSlideId === slideId ? (nextSlides[0]?.id ?? null) : prev.activeSlideId
       return { ...prev, slides: nextSlides, activeSlideId: nextActiveSlideId }
     })
+    setSelectedSlideIds((prev) => prev.filter((id) => id !== slideId))
     setSelectedObjectId(null)
   }
 
@@ -875,13 +926,21 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
         slides={project.slides}
         activeSlideId={project.activeSlideId}
         activeSlide={activeSlide}
+
         onSelectSlide={handleSelectSlide}
         onAddSlide={handleAddSlide}
         onRenameSlide={handleRenameSlide}
         onDuplicateSlide={handleDuplicateSlide}
         onDeleteSlide={handleDeleteSlide}
+
         onUploadBackground={handleUploadBackground}
         onClearBackground={handleClearBackground}
+
+        selectedSlideIds={selectedSlideIds}
+        onToggleSlideSelect={handleToggleSlideSelect}
+
+        onExtractSlides={handleExtractSlides}
+        extractDialogOpen={extractOpen}
       />
 
       <div className="flex min-h-0 flex-1">
@@ -973,6 +1032,13 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
           onSetActiveTab={setRightPanelTab}
         />
       </div>
+      <ExtractConfirmDialog
+        open={extractOpen}
+        onOpenChange={setExtractOpen}
+        slides={project.slides.filter((s) => selectedSlideIds.includes(s.id))}
+        onConfirm={handleExtractConfirm}
+        loading={extractLoading}
+      />
     </div>
   )
 }
