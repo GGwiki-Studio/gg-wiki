@@ -2,6 +2,7 @@
 
 import { client } from '@/api/client'
 import { createDefaultProject } from '@/components/builder/builder.utils'
+import { deleteProjectAssets } from '@/lib/storage/project-storage'
 import type { BuilderProject } from '@/components/builder/builder.types'
 
 export interface ProjectListItem {
@@ -125,6 +126,8 @@ export async function deleteProject(
   projectId: string,
   userId: string
 ): Promise<ActionResult<{ id: string }>> {
+  await deleteProjectAssets(userId, projectId)
+
   const { error } = await client
     .from('projects')
     .delete()
@@ -142,15 +145,19 @@ export async function saveProject(
   schemaVersion: number,
   thumbnailUrl?: string | null
 ): Promise<ActionResult<ProjectListItem>> {
+  const updatePayload: Record<string, unknown> = {
+    project_data: projectData,
+    schema_version: schemaVersion,
+    title: projectData.title,
+    updated_at: new Date().toISOString(),
+  }
+  if (thumbnailUrl) {
+    updatePayload.thumbnail_url = thumbnailUrl
+  }
+
   const { data, error } = await client
     .from('projects')
-    .update({
-      project_data: projectData,
-      schema_version: schemaVersion,
-      title: projectData.title,
-      thumbnail_url: thumbnailUrl,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq('id', projectId)
     .eq('user_id', userId)
     .select('id, title, schema_version, created_at, updated_at, thumbnail_url')
