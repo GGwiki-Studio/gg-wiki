@@ -30,7 +30,7 @@ const SignInForm = () => {
   })
  
   const onSubmit = async ({email, password}: z.infer<typeof formSchema>) => {
-    console.log("Email:", email, "Password:", password);
+
     const { data, error } = await client.auth.signInWithPassword({
       email,
       password,

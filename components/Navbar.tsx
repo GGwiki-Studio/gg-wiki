@@ -44,7 +44,7 @@ const Navbar = () => {
             <Navitems />
             <Link href={href} className={cn(pathname === href && 'font-bold', 'text-xl', cn(user && 'hidden'))}>Register</Link>
             <div className="relative">
-              <a onClick={showOptions} className={cn(!user && 'hidden', 'cursor-pointer')}>
+              <a onClick={showOptions} className={cn((!user || !user.email_confirmed_at) && 'hidden', 'cursor-pointer')}>
                 <Image src="/profile.svg" alt="User Icon" width={40} height={40} className={'filter invert'}/>
               </a>
               {showDropDown && user && (
