@@ -214,3 +214,31 @@ export async function deleteStrat(
   if (error) return { data: null, error: error.message }
   return { data: { id: stratId }, error: null }
 }
+
+export async function getOwnedStrats(
+  userId: string
+): Promise<ActionResult<StratListItem[]>> {
+  const { data, error } = await client
+    .from('strats')
+    .select('id, title, visibility, saved_from_feed, forked_from_id, created_at, updated_at')
+    .eq('user_id', userId)
+    .eq('saved_from_feed', false)
+    .order('updated_at', { ascending: false })
+
+  if (error) return { data: null, error: error.message }
+  return { data: (data || []).map(toStratListItem), error: null }
+}
+
+export async function getSavedStrats(
+  userId: string
+): Promise<ActionResult<StratListItem[]>> {
+  const { data, error } = await client
+    .from('strats')
+    .select('id, title, visibility, saved_from_feed, forked_from_id, created_at, updated_at')
+    .eq('user_id', userId)
+    .eq('saved_from_feed', true)
+    .order('updated_at', { ascending: false })
+
+  if (error) return { data: null, error: error.message }
+  return { data: (data || []).map(toStratListItem), error: null }
+}

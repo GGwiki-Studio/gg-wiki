@@ -62,7 +62,7 @@ export default function ExtractConfirmDialog({
 
           <div className="flex justify-end gap-3">
             <Dialog.Close asChild>
-              <Button variant="ghost" className="text-[#999] hover:text-[#ccc]">
+              <Button variant="ghost" className="text-[#999]">
                 Cancel
               </Button>
             </Dialog.Close>
