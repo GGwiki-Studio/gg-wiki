@@ -2,7 +2,7 @@
 
 import MapFilter from "@/components/MapFilter";
 import StartCard from "@/components/StartCard";
-import { getAllStrats } from "@/lib/actions/strat.actions";
+import { getAllStrats } from "@/lib/actions/posted.actions";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";

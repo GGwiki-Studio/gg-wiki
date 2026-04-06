@@ -6,7 +6,7 @@ import StartCard from "@/components/StartCard";
 import StratCardList from "@/components/StratCardList"
 import { Button } from "@/components/ui/button";
 import { getAllGames } from "@/lib/actions/game.actions";
-import { getAllStrats } from "@/lib/actions/strat.actions";
+import { getAllStrats } from "@/lib/actions/posted.actions";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";

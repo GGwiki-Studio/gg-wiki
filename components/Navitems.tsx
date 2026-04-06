@@ -8,7 +8,7 @@ import { toast } from "sonner"
 const navItems = [
   {label: "Home", href: "/"},
   {label: "Games", href: "/games"},
-  {label: "Create", href: "/create-strat", protected: true},
+  {label: "Create", href: "/projects", protected: true},
   {label: "Dashboard", href: "/dashboard", protected: true},
 ]
 

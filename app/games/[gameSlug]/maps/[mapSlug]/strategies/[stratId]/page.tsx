@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Heart, MessageCircle, Eye, Calendar, User, Trophy, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { toast } from 'sonner'
 import useAuth from '@/components/hooks/useAuth'
-import { getStrat, likeStrat, getComments, addComment, incrementViewCount } from '@/lib/actions/strat.actions'
+import { getStrat, likeStrat, getComments, addComment, incrementViewCount } from '@/lib/actions/posted.actions'
 
 interface Strategy {
     id: string

@@ -33,7 +33,7 @@ import {
   RadioGroupItem,
 } from "./ui/radio-group"
 import TagInput from "./TagInput"
-import { createStrat } from "@/lib/actions/strat.actions"
+import { createStrat } from "@/lib/actions/posted.actions"
 import { redirect } from "next/navigation"
 import { toast } from "sonner"
 import { useState, useEffect } from "react"
