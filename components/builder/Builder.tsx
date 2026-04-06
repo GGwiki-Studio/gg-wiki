@@ -320,7 +320,7 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
             upsert: true,
           })
           const { data } = client.storage.from('project-assets').getPublicUrl(path)
-          thumbnailUrl = data.publicUrl
+          thumbnailUrl = thumbnailUrl = `${data.publicUrl}?t=${Date.now()}`
         }
       }
       const converted = await convertBase64ToStorageUrls(project, userId, projectId)
