@@ -140,7 +140,7 @@ export interface BuilderProject {
   description: string
   gameId?: string | null
   mapId?: string | null
-  activeSlideId: string | null
+  activeSlideId: string | null // u leave off the last slide u were at
   slides: BuilderSlide[]
   tags: StratTag[]
   uploadedIcons: UploadedIcon[]
@@ -153,6 +153,10 @@ export interface BuilderProject {
 
 export interface BuilderTopBarProps {
   projectTitle: string
+  onSave?: () => void
+  isSaving?: boolean
+  hasUnsavedChanges?: boolean
+  canSave?: boolean
 }
 
 export interface BuilderSlideStripProps {

@@ -1,8 +1,16 @@
 'use client'
 
+import { Save } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { BuilderTopBarProps } from './builder.types'
 
-const BuilderTopBar = ({ projectTitle }: BuilderTopBarProps) => {
+const BuilderTopBar = ({
+  projectTitle,
+  onSave,
+  isSaving,
+  hasUnsavedChanges,
+  canSave,
+}: BuilderTopBarProps) => {
   return (
     <div className="flex h-9 items-center border-b border-[#1f1f1f] bg-[#111111] px-4">
       <div className="flex items-center gap-1.5 text-xs">
@@ -12,7 +20,19 @@ const BuilderTopBar = ({ projectTitle }: BuilderTopBarProps) => {
           {projectTitle || 'Untitled Strategy'}
         </span>
       </div>
-      {/* future: undo redo save publish go here */}
+
+      {canSave && onSave && (
+        <Button
+          onClick={onSave}
+          disabled={isSaving || !hasUnsavedChanges}
+          size="xs"
+          variant="ghost"
+          className="gap-1.5 text-xs text-[#999] hover:text-[#ccc] disabled:opacity-30"
+        >
+          <Save className="h-3 w-3" />
+          {isSaving ? 'Saving...' : 'Save'}
+        </Button>
+      )}
     </div>
   )
 }

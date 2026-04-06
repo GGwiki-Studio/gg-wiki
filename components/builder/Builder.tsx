@@ -1,6 +1,12 @@
 'use client'
 
 import { toast } from 'sonner'
+import { saveProject } from '@/lib/actions/project.actions'
+import { convertBase64ToStorageUrls } from './builder.storage-utils'
+import { CURRENT_SCHEMA_VERSION } from '@/lib/schema/builder/schema-migration'
+import { uploadBase64Asset } from '@/lib/storage/project-storage'
+
+import { client } from '@/api/client'
 
 import {
   memo,
@@ -161,12 +167,23 @@ const CanvasImageObject = memo(({
 
 CanvasImageObject.displayName = 'CanvasImageObject'
 
-const Builder = () => {
-  const [project, setProject] = useState<BuilderProject>(() => createDefaultProject())
+interface BuilderProps {
+  initialProject?: BuilderProject
+  projectId?: string
+  userId?: string
+}
+
+const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
+  const [project, setProject] = useState<BuilderProject>(() => initialProject ?? createDefaultProject())
+
   const [activeTool, setActiveTool] = useState<ToolType>('select')
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null)
   const [rightPanelTab, setRightPanelTab] = useState<'assets' | 'inspector' | 'tags'>('assets')
   const [filterTagIds, setFilterTagIds] = useState<string[]>([])
+
+  const [isSaving, setIsSaving] = useState(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const skipDirtyRef = useRef(false)
 
   const stageRef = useRef<Konva.Stage | null>(null)
   const transformerRef = useRef<Konva.Transformer | null>(null)
@@ -238,6 +255,9 @@ const Builder = () => {
 
   const updateProject = useCallback((updater: (prev: BuilderProject) => BuilderProject) => {
     setProject((prev) => ({ ...updater(prev), updatedAt: getNowIso() }))
+    if (!skipDirtyRef.current) {
+      setHasUnsavedChanges(true)
+    }
   }, [])
 
   const updateActiveSlide = useCallback(
@@ -269,8 +289,65 @@ const Builder = () => {
     [updateActiveSlide]
   )
 
-  // slide actions
+  // save action
+  const handleSave = useCallback(async () => {
 
+    if (!projectId || !userId || isSaving) return
+
+    setIsSaving(true)
+    try {
+     const thumbnail = stageRef.current?.toDataURL({ pixelRatio: 0.2 }) || null
+      //thumbnail handling and we delete the old thumbnail with every new 1
+      let thumbnailUrl: string | null = null
+      if (thumbnail) {
+        const match = thumbnail.match(/^data:([^;]+);base64,(.+)$/)
+        if (match) {
+          const path = `${userId}/${projectId}/thumbnail.png`
+          const byteChars = atob(match[2])
+          const byteArray = new Uint8Array(byteChars.length)
+          for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i)
+          const blob = new Blob([byteArray], { type: 'image/png' })
+
+          await client.storage.from('project-assets').upload(path, blob, {
+            contentType: 'image/png',
+            upsert: true,
+          })
+          const { data } = client.storage.from('project-assets').getPublicUrl(path)
+          thumbnailUrl = data.publicUrl
+        }
+      }
+      const converted = await convertBase64ToStorageUrls(project, userId, projectId)
+      //
+
+      const { error } = await saveProject(projectId, userId, converted, CURRENT_SCHEMA_VERSION, thumbnailUrl)
+      if (error) {
+        toast.error('Failed to save project')
+      } else {
+        skipDirtyRef.current = true
+        setProject(converted)
+        skipDirtyRef.current = false
+        setHasUnsavedChanges(false)
+        toast.success('Project saved')
+      }
+    } catch {
+      toast.error('Failed to save project')
+    }
+    setIsSaving(false)
+  }, [project, projectId, userId, isSaving])
+  // Autosave every 10 minutes if there are unsaved changes
+  useEffect(() => {
+    if (!projectId || !userId) return
+
+    const interval = setInterval(() => {
+      if (hasUnsavedChanges && !isSaving) {
+        handleSave()
+      }
+    }, 10 * 60 * 1000)
+
+    return () => clearInterval(interval)
+  }, [projectId, userId, hasUnsavedChanges, isSaving, handleSave])
+
+  // slide actions — uses setProject directly so switching slides doesn't mark dirty
   const handleSelectSlide = (slideId: string) => {
     setSelectedObjectId(null)
 
@@ -279,7 +356,7 @@ const Builder = () => {
       currentSlide.objects.forEach((obj) => { delete objectNodeMapRef.current[obj.id] })
     }
 
-    updateProject((prev) => ({ ...prev, activeSlideId: slideId }))
+    setProject((prev) => ({ ...prev, activeSlideId: slideId }))
   }
 
   const handleAddSlide = () => {
@@ -786,7 +863,13 @@ const Builder = () => {
 
   return (
     <div className="flex h-[calc(100vh-64px)] w-full flex-col overflow-hidden bg-[#0e0e0e]">
-      <BuilderTopBar projectTitle={project.title} />
+      <BuilderTopBar
+        projectTitle={project.title}
+        onSave={handleSave}
+        isSaving={isSaving}
+        hasUnsavedChanges={hasUnsavedChanges}
+        canSave={!!projectId && !!userId}
+      />
 
       <BuilderSlideStrip
         slides={project.slides}
