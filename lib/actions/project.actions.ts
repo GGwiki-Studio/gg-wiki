@@ -107,10 +107,26 @@ export async function renameProject(
   userId: string,
   newTitle: string
 ): Promise<ActionResult<ProjectListItem>> {
+  // First get current project_data to update title inside it
+  const { data: current, error: fetchError } = await client
+    .from('projects')
+    .select('project_data')
+    .eq('id', projectId)
+    .eq('user_id', userId)
+    .single()
+
+  if (fetchError || !current) return { data: null, error: fetchError?.message || 'Not found' }
+
+  const updatedProjectData = {
+    ...(current.project_data as BuilderProject),
+    title: newTitle,
+  }
+
   const { data, error } = await client
     .from('projects')
     .update({
       title: newTitle,
+      project_data: updatedProjectData,
       updated_at: new Date().toISOString(),
     })
     .eq('id', projectId)
