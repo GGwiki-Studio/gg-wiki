@@ -107,7 +107,7 @@ const CreateForm = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { data: gamesData, error: gamesError } = await client.from('games').select('id, name, slug')
+        const { data: gamesData, error: gamesError } = await client.from('games').select('id, name, slug').eq('is_active', true)
         if(gamesError) throw gamesError
 
         const { data: mapsData, error: mapsError } = await client.from('maps').select('id, name, slug, game_id').order('name')

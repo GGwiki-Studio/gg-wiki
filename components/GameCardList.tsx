@@ -19,6 +19,7 @@ const GameCardList = () => {
         const { data: gameData, error } = await client
           .from('games')
           .select('slug, name, cover_image_url, member_count')
+          .eq('is_active', true)
           .order('member_count', { ascending: false })
           .limit(5)        
         

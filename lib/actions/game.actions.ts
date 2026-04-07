@@ -8,7 +8,7 @@ interface GetAllGames {
 }
 
 export const getAllGames = async ({limit, genre, topic}: GetAllGames) => {
-    let query = client.from('games').select();
+    let query = client.from('games').select().eq('is_active', true);
 
     if(genre && topic){
         query = query.ilike('genre', `%${genre}%`)
@@ -20,16 +20,6 @@ export const getAllGames = async ({limit, genre, topic}: GetAllGames) => {
     else if(topic){
         query = query.or(`name.ilike.%${topic}%,description.ilike.%${topic}%`)
     }
-
-    // if(name){
-    //     query.ilike('name', `%${name}%`)
-    // }
-    // if(genre){
-    //     query.ilike('genre', `%${genre}%`)
-    // }
-    // if(description){
-    //     query.or(`description.ilike.%${description}%`)
-    // }
 
     if(limit !== 0){
         query = query.limit(limit)
