@@ -19,8 +19,6 @@ export interface StratViewerCanvasProps {
   onHoverObject: (info: HoveredObjectInfo | null) => void
 }
 
-// in strat-viewer.types.ts, update:
-
 export interface StratViewerHoverTooltipProps {
   hoveredObject: HoveredObjectInfo | null
   tags: StratTag[]

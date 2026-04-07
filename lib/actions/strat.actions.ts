@@ -268,3 +268,23 @@ export async function getSavedStrats(
   if (error) return { data: null, error: error.message }
   return { data: (data || []).map(toStratListItem), error: null }
 }
+
+export async function renameStrat(
+  stratId: string,
+  userId: string,
+  newTitle: string
+): Promise<ActionResult<StratListItem>> {
+  const { data, error } = await client
+    .from('strats')
+    .update({
+      title: newTitle,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', stratId)
+    .eq('user_id', userId)
+    .select('id, title, visibility, saved_from_feed, forked_from_id, thumbnail_url, created_at, updated_at')
+    .single()
+
+  if (error) return { data: null, error: error.message }
+  return { data: toStratListItem(data), error: null }
+}
