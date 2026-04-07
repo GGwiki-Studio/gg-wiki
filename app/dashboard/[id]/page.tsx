@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import useAuth from '@/components/hooks/useAuth'
-import { getOwnedStrats, getSavedStrats, deleteStrat, getStrat } from '@/lib/actions/strat.actions'
+import { getOwnedStrats, getSavedStrats, deleteStrat, getStrat, renameStrat } from '@/lib/actions/strat.actions'
+import { generateStratHtml } from '@/lib/export/strat-html-export'
 import type { StratListItem } from '@/components/strat-viewer/strat.types'
 import type { StratSlideData } from '@/components/strat-viewer/strat.types'
 import type { DashboardSection, GalleryTab } from '@/components/dashboard/dashboard.types'
@@ -103,7 +104,6 @@ export default function DashboardPage() {
       toast.error('Failed to delete strat')
     } else {
       setOwnedStrats((prev) => prev.filter((s) => s.id !== deleteTarget.id))
-      // collapse if the deleted strat was expanded
       if (expandedStratId === deleteTarget.id) {
         handleCollapseStrat()
       }
@@ -113,6 +113,42 @@ export default function DashboardPage() {
     setDeleteLoading(false)
     setDeleteOpen(false)
     setDeleteTarget(null)
+  }
+
+  // export strat as standalone HTML file
+  const handleExportStrat = async (id: string) => {
+    if (!user) return
+
+    const { data, error } = await getStrat(id, user.id)
+    if (error || !data) {
+      toast.error('Failed to load strat for export')
+      return
+    }
+
+    const html = generateStratHtml(data.title, data.slideData)
+    const blob = new Blob([html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${data.title.replace(/[^a-zA-Z0-9-_ ]/g, '')}.html`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('Strat exported')
+  }
+
+  const handleRenameStrat = async (id: string, newTitle: string) => {
+    if (!user) return
+
+    const { error } = await renameStrat(id, user.id, newTitle)
+    if (error) {
+      toast.error('Failed to rename strat')
+      return
+    }
+
+    setOwnedStrats((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, title: newTitle, updatedAt: new Date().toISOString() } : s))
+    )
+    toast.success('Strat renamed')
   }
 
   if (authLoading || loading) {
@@ -133,6 +169,8 @@ export default function DashboardPage() {
         onExpandStrat={handleExpandStrat}
         onCollapseStrat={handleCollapseStrat}
         onDeleteStrat={handleDeleteStrat}
+        onExportStrat={handleExportStrat}
+        onRenameStrat={handleRenameStrat}
         expandedStratId={expandedStratId}
         expandedSlideData={expandedSlideData}
       />

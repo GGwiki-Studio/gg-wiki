@@ -14,6 +14,8 @@ export default function StratGallery({
   onExpandStrat,
   onCollapseStrat,
   onDeleteStrat,
+  onExportStrat,
+  onRenameStrat,
   expandedStratId,
   expandedSlideData,
 }: StratGalleryProps) {
@@ -50,6 +52,8 @@ export default function StratGallery({
               onExpand={onExpandStrat}
               onCollapse={onCollapseStrat}
               onDelete={onDeleteStrat}
+              onExport={onExportStrat}
+              onRename={onRenameStrat}
             />
           ))}
         </div>

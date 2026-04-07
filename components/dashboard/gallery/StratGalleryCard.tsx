@@ -1,9 +1,8 @@
-// components/dashboard/gallery/StratGalleryCard.tsx
-
 'use client'
 
+import { useState } from 'react'
 import { DropdownMenu } from 'radix-ui'
-import { Eye, Minimize2, MoreHorizontal, Trash2 } from 'lucide-react'
+import { Download, Eye, Minimize2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import type { StratGalleryCardProps } from '../dashboard.types'
 import StratViewer from '@/components/strat-viewer/StratViewer'
 
@@ -31,12 +30,52 @@ export default function StratGalleryCard({
   onExpand,
   onCollapse,
   onDelete,
+  onExport,
+  onRename,
 }: StratGalleryCardProps) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+
+  const startRename = () => {
+    setDraft(strat.title)
+    setEditing(true)
+  }
+
+  const submitRename = () => {
+    const trimmed = draft.trim()
+    if (!trimmed || trimmed === strat.title) { setEditing(false); return }
+    onRename(strat.id, trimmed)
+    setEditing(false)
+  }
+
+  const cancelRename = () => {
+    setEditing(false)
+    setDraft('')
+  }
+
+  const titleElement = editing ? (
+    <input
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') submitRename()
+        if (e.key === 'Escape') cancelRename()
+      }}
+      onBlur={submitRename}
+      autoFocus
+      maxLength={100}
+      onClick={(e) => e.stopPropagation()}
+      className="h-6 w-full max-w-[200px] rounded border border-[#3b82f6] bg-[#0d1829] px-2 text-sm text-white outline-none"
+    />
+  ) : (
+    <h3 className="truncate text-sm font-medium text-[#ddd]">{strat.title}</h3>
+  )
+
   // collapsed card
   if (!expanded) {
     return (
       <div
-        onClick={() => onExpand(strat.id)}
+        onClick={() => !editing && onExpand(strat.id)}
         className="group cursor-pointer overflow-hidden rounded-[10px] border border-[#2a2a2a] bg-[#1e1e1e] transition-colors hover:border-[#3a3a3a]"
       >
         <div className="flex h-[100px] items-center justify-center overflow-hidden bg-[#252525]">
@@ -49,13 +88,13 @@ export default function StratGalleryCard({
 
         <div className="p-3.5">
           <div className="mb-1.5 flex items-start justify-between">
-            <h3 className="truncate text-sm font-medium text-[#ddd]">{strat.title}</h3>
+            {titleElement}
             <CardMenu
-              stratId={strat.id}
               owned={owned}
-              forkedFromId={strat.forkedFromId}
               onExpand={() => onExpand(strat.id)}
               onDelete={() => onDelete(strat.id)}
+              onExport={() => onExport(strat.id)}
+              onRename={startRename}
             />
           </div>
 
@@ -75,20 +114,21 @@ export default function StratGalleryCard({
   // expanded card with StratViewer
   return (
     <div className="col-span-full overflow-hidden rounded-[10px] border border-[#333] bg-[#1e1e1e]">
-      {/* header */}
       <div className="flex items-center justify-between border-b border-[#2a2a2a] px-4 py-2.5">
         <div>
-          <h3 className="text-sm font-medium text-[#eee]">{strat.title}</h3>
+          {editing ? titleElement : (
+            <h3 className="text-sm font-medium text-[#eee]">{strat.title}</h3>
+          )}
           <span className="text-[11px] text-[#555]">{timeAgo(strat.updatedAt)}</span>
         </div>
 
         <div className="flex items-center gap-2">
           <CardMenu
-            stratId={strat.id}
             owned={owned}
-            forkedFromId={strat.forkedFromId}
             onExpand={() => onExpand(strat.id)}
             onDelete={() => onDelete(strat.id)}
+            onExport={() => onExport(strat.id)}
+            onRename={startRename}
           />
           <button
             onClick={onCollapse}
@@ -100,7 +140,6 @@ export default function StratGalleryCard({
         </div>
       </div>
 
-      {/* viewer */}
       <div className="p-3">
         {slideData ? (
           <StratViewer slideData={slideData} />
@@ -114,19 +153,18 @@ export default function StratGalleryCard({
   )
 }
 
-// shared dropdown menu
 function CardMenu({
-  stratId,
   owned,
-  forkedFromId,
   onExpand,
   onDelete,
+  onExport,
+  onRename,
 }: {
-  stratId: string
   owned: boolean
-  forkedFromId: string | null
   onExpand: () => void
   onDelete: () => void
+  onExport: () => void
+  onRename: () => void
 }) {
   return (
     <DropdownMenu.Root>
@@ -154,8 +192,24 @@ function CardMenu({
             View
           </DropdownMenu.Item>
 
+          <DropdownMenu.Item
+            onSelect={onExport}
+            className="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-[#ccc] outline-none hover:bg-[#252525]"
+          >
+            <Download size={14} className="text-[#666]" />
+            Save as HTML
+          </DropdownMenu.Item>
+
           {owned && (
             <>
+              <DropdownMenu.Item
+                onSelect={onRename}
+                className="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-[#ccc] outline-none hover:bg-[#252525]"
+              >
+                <Pencil size={14} className="text-[#666]" />
+                Rename
+              </DropdownMenu.Item>
+
               <DropdownMenu.Separator className="my-1 h-px bg-[#2a2a2a]" />
               <DropdownMenu.Item
                 onSelect={onDelete}
