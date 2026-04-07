@@ -141,6 +141,7 @@ export async function resolveReport(
         status: 'resolved' | 'dismissed'
 review_note: string
 action_taken?: string
+judgment?: 'deleted' | 'deactivated' | 'dismissed' | 'restored'
     }
 ) {
     const { data: { user } } = await client.auth.getUser()
@@ -148,7 +149,9 @@ action_taken?: string
     const { data, error } = await client
     .from('reports')
     .update({
-        ...action,
+        status: action.status,
+        review_note: action.review_note,
+        action_taken: action.action_taken,
         reviewed_by: user!.id,
         resolved_at: new Date().toISOString()
     })
@@ -160,6 +163,7 @@ action_taken?: string
         return data
 }
 
+// ============ STRATEGY MANAGEMENT (Soft delete with undo) ============
 export async function removeStrategy(strategyId: string, reason: string) {
     const { data: { user } } = await client.auth.getUser()
 
@@ -174,24 +178,65 @@ export async function removeStrategy(strategyId: string, reason: string) {
     .eq('id', strategyId)
 
     if (error) throw error
+
+        return { success: true, message: "Strategy deactivated." }
 }
 
-export async function removeComment(commentId: string, reason: string) {
-    const { data: { user } } = await client.auth.getUser()
-
-    const { error } = await client
-    .from('comments')
+export async function restoreStrategy(strategyId: string) {
+    const { data, error } = await client
+    .from('strategies')
     .update({
-        is_removed: true,
-        removed_by: user!.id,
-        removed_at: new Date().toISOString(),
-            removal_reason: reason
+        is_removed: false,
+        removed_by: null,
+        removed_at: null,
+        removal_reason: null
     })
-    .eq('id', commentId)
+    .eq('id', strategyId)
+    .select()
+    .single()
 
     if (error) throw error
+
+        return { success: true, data }
 }
 
+export async function isStrategyRemoved(strategyId: string): Promise<boolean> {
+    const { data, error } = await client
+    .from('strategies')
+    .select('is_removed')
+    .eq('id', strategyId)
+    .single()
+
+    if (error) throw error
+        return data?.is_removed || false
+}
+
+// ============ COMMENT MANAGEMENT (HARD DELETE - Permanent) ============
+export async function removeComment(commentId: string, _reason: string) {
+    // Delete the comment first
+    const { error: commentError } = await client
+    .from('comments')
+    .delete()
+    .eq('id', commentId)
+
+    if (commentError) throw commentError
+
+        // Then delete ALL reports associated with this comment
+        const { error: reportError } = await client
+        .from('reports')
+        .delete()
+        .eq('content_id', commentId)
+        .eq('content_type', 'comment')
+
+        if (reportError) {
+            console.error('Failed to delete associated reports:', reportError)
+            // Don't throw - comment is already deleted
+        }
+
+        return { success: true, message: "Comment and its reports permanently deleted." }
+}
+
+// ============ STRAT MANAGEMENT (Soft delete) ============
 export async function removeStrat(stratId: string, reason: string) {
     const { data: { user } } = await client.auth.getUser()
 
@@ -206,4 +251,43 @@ export async function removeStrat(stratId: string, reason: string) {
     .eq('id', stratId)
 
     if (error) throw error
+}
+
+export async function restoreStrat(stratId: string) {
+    const { error } = await client
+    .from('strats')
+    .update({
+        is_removed: false,
+        removed_by: null,
+        removed_at: null,
+        removal_reason: null
+    })
+    .eq('id', stratId)
+
+    if (error) throw error
+
+        return { success: true }
+}
+
+export async function reopenReport(reportId: string) {
+    const { error } = await client
+    .from('reports')
+    .update({
+        status: 'pending',
+        reviewed_by: null,
+        resolved_at: null,
+        review_note: null,
+        action_taken: null
+    })
+    .eq('id', reportId)
+
+    if (error) throw error
+
+        return { success: true }
+}
+
+// ============ HELPER: Get current user ============
+async function getCurrentUserId(): Promise<string | null> {
+    const { data: { user } } = await client.auth.getUser()
+    return user?.id || null
 }
