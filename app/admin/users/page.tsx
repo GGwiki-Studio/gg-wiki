@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import useAuth from '@/components/hooks/useAuth'
 import { getAllUsers, updateUserRole } from '@/lib/admin'
@@ -15,6 +15,7 @@ interface AdminUser {
 export default function AdminUsers() {
     const { user, userRole, loading } = useAuth()
     const router = useRouter()
+    const hasFetched = useRef(false)
     const [users, setUsers] = useState<AdminUser[]>([])
     const [dataLoading, setDataLoading] = useState(true)
     const [currentPage, setCurrentPage] = useState(1)
@@ -23,19 +24,28 @@ export default function AdminUsers() {
     const PAGE_SIZE = 50
 
     useEffect(() => {
-        if (!loading) {
+        if (loading) return
+
             if (!user || userRole !== 'admin') {
                 router.push('/')
-            } else {
-                loadUsers()
+                return
             }
-        }
-    }, [user, userRole, loading, router, currentPage])
 
-    async function loadUsers() {
+            if (hasFetched.current) return
+                hasFetched.current = true
+
+                loadUsers(1)
+    }, [user, userRole, loading]) // no router
+
+    useEffect(() => {
+        if (!hasFetched.current) return
+            loadUsers(currentPage)
+    }, [currentPage])
+
+    async function loadUsers(page: number) {
         setDataLoading(true)
         try {
-            const result = await getAllUsers(currentPage, PAGE_SIZE)
+            const result = await getAllUsers(page, PAGE_SIZE)
             setUsers(result.users as AdminUser[])
             setTotalPages(result.totalPages)
         } catch (error) {
@@ -46,18 +56,15 @@ export default function AdminUsers() {
     }
 
     async function handleRoleChange(userId: string, newRole: 'user' | 'admin') {
-        // FIXED: Prevent self-demotion
         if (userId === user?.id && newRole === 'user') {
             alert('⚠️ You cannot demote yourself! Ask another admin to do this.')
-            // Reset the select back - reload users
-            loadUsers()
+            loadUsers(currentPage)
             return
         }
 
         setUpdatingId(userId)
         try {
             await updateUserRole(userId, newRole)
-            // Update local state instead of full reload for better UX
             setUsers(prev =>
             prev.map(u => (u.id === userId ? { ...u, role: newRole } : u))
             )

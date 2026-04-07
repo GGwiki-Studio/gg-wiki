@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import useAuth from '@/components/hooks/useAuth'
 import {
@@ -87,16 +87,28 @@ export default function AdminReports() {
         contentId?: string
     } | null>(null)
     const PAGE_SIZE = 20
+    const hasFetched = useRef(false)  // add this line near your other state declarations
 
+    // Auth guard — runs once
     useEffect(() => {
-        if (!loading) {
+        if (loading) return
+
             if (!user || userRole !== 'admin') {
                 router.push('/')
-            } else {
-                loadReports()
+                return
             }
-        }
-    }, [user, userRole, loading, router, filter, currentPage])
+
+            if (hasFetched.current) return
+                hasFetched.current = true
+
+                loadReports()
+    }, [user, userRole, loading]) // no router, no filter, no currentPage
+
+    // Filter/page changes — runs after initial load
+    useEffect(() => {
+        if (!hasFetched.current) return
+            loadReports()
+    }, [filter, currentPage])
 
     async function loadReports() {
         setDataLoading(true)

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import useAuth from '@/components/hooks/useAuth'
 import { getAllUsers, getAllGames, getReports } from '@/lib/admin'
@@ -7,6 +7,7 @@ import { getAllUsers, getAllGames, getReports } from '@/lib/admin'
 export default function AdminDashboard() {
     const { user, userRole, loading } = useAuth()
     const router = useRouter()
+    const hasFetched = useRef(false)
     const [stats, setStats] = useState({
         users: 0,
         games: 0,
@@ -15,14 +16,18 @@ export default function AdminDashboard() {
     const [dataLoading, setDataLoading] = useState(true)
 
     useEffect(() => {
-        if (!loading) {
+        if (loading) return
+
             if (!user || userRole !== 'admin') {
                 router.push('/')
-            } else {
-                loadStats()
+                return
             }
-        }
-    }, [user, userRole, loading, router])
+
+            if (hasFetched.current) return
+                hasFetched.current = true
+
+                loadStats()
+    }, [user, userRole, loading])
 
     async function loadStats() {
         try {

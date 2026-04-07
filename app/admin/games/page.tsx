@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import useAuth from '@/components/hooks/useAuth'
 import { getAllGames, addGame, toggleGameActive, deleteGame } from '@/lib/admin'
@@ -18,6 +18,7 @@ interface AdminGame {
 export default function AdminGames() {
     const { user, userRole, loading } = useAuth()
     const router = useRouter()
+    const hasFetched = useRef(false)
     const [games, setGames] = useState<AdminGame[]>([])
     const [dataLoading, setDataLoading] = useState(true)
     const [showAddForm, setShowAddForm] = useState(false)
@@ -30,19 +31,28 @@ export default function AdminGames() {
     const PAGE_SIZE = 50
 
     useEffect(() => {
-        if (!loading) {
+        if (loading) return
+
             if (!user || userRole !== 'admin') {
                 router.push('/')
-            } else {
-                loadGames()
+                return
             }
-        }
-    }, [user, userRole, loading, router, currentPage])
 
-    async function loadGames() {
+            if (hasFetched.current) return
+                hasFetched.current = true
+
+                loadGames(1)
+    }, [user, userRole, loading])
+
+    useEffect(() => {
+        if (!hasFetched.current) return
+            loadGames(currentPage)
+    }, [currentPage])
+
+    async function loadGames(page: number) {
         setDataLoading(true)
         try {
-            const result = await getAllGames(currentPage, PAGE_SIZE)
+            const result = await getAllGames(page, PAGE_SIZE)
             setGames(result.games as AdminGame[])
             setTotalPages(result.totalPages)
         } catch (error) {
@@ -65,12 +75,12 @@ export default function AdminGames() {
                           slug: formData.get('slug') as string,
                           description: (formData.get('description') as string) || undefined,
                           genre: (formData.get('genre') as string) || undefined,
-                          cover_image_url:
-                          (formData.get('cover_image_url') as string) || undefined,
+                          cover_image_url: (formData.get('cover_image_url') as string) || undefined,
             })
             setShowAddForm(false)
             setCurrentPage(1)
-            loadGames()
+            hasFetched.current = false
+            loadGames(1)
             ;(e.target as HTMLFormElement).reset()
         } catch (error: any) {
             setFormError(error.message || 'Failed to add game')
@@ -244,71 +254,43 @@ export default function AdminGames() {
             <table className="w-full">
             <thead className="bg-[#1a1a1a]">
             <tr>
-            <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">
-            Game
-            </th>
-            <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">
-            Slug
-            </th>
-            <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">
-            Genre
-            </th>
-            <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">
-            Status
-            </th>
-            <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">
-            Actions
-            </th>
+            <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Game</th>
+            <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Slug</th>
+            <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Genre</th>
+            <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Status</th>
+            <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">Actions</th>
             </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
             {games.map(game => (
                 <tr key={game.id} className="hover:bg-[#2a2a2a] transition">
                 <td className="px-6 py-4 font-medium">{game.name}</td>
-                <td className="px-6 py-4 text-sm text-gray-400 font-mono">
-                {game.slug}
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-400">
-                {game.genre || '—'}
-                </td>
+                <td className="px-6 py-4 text-sm text-gray-400 font-mono">{game.slug}</td>
+                <td className="px-6 py-4 text-sm text-gray-400">{game.genre || '—'}</td>
                 <td className="px-6 py-4">
-                <span
-                className={`px-3 py-1 rounded text-xs font-medium ${
-                    game.is_active ? 'bg-green-600' : 'bg-red-600'
-                }`}
-                >
+                <span className={`px-3 py-1 rounded text-xs font-medium ${game.is_active ? 'bg-green-600' : 'bg-red-600'}`}>
                 {game.is_active ? 'Active' : 'Inactive'}
                 </span>
                 </td>
                 <td className="px-6 py-4">
                 <div className="flex gap-2">
                 <button
-                onClick={() =>
-                    handleToggle(game.id, game.is_active)
-                }
-                disabled={
-                    togglingId === game.id || deletingId === game.id
-                }
+                onClick={() => handleToggle(game.id, game.is_active)}
+                disabled={togglingId === game.id || deletingId === game.id}
                 className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                {togglingId === game.id
-                    ? '...'
-            : game.is_active
-            ? 'Deactivate'
-            : 'Activate'}
-            </button>
-            <button
-            onClick={() => handleDelete(game.id, game.name)}
-            disabled={
-                deletingId === game.id || togglingId === game.id
-            }
-            className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-            {deletingId === game.id ? '...' : 'Delete'}
-            </button>
-            </div>
-            </td>
-            </tr>
+                {togglingId === game.id ? '...' : game.is_active ? 'Deactivate' : 'Activate'}
+                </button>
+                <button
+                onClick={() => handleDelete(game.id, game.name)}
+                disabled={deletingId === game.id || togglingId === game.id}
+                className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                {deletingId === game.id ? '...' : 'Delete'}
+                </button>
+                </div>
+                </td>
+                </tr>
             ))}
             </tbody>
             </table>

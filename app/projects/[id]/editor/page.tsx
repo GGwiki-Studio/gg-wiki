@@ -77,7 +77,7 @@ export default function EditorPage() {
     <Builder
       initialProject={projectData}
       projectId={projectId}
-      userId={user.id}
-    />
+      userId={user!.id}
+      />
   )
 }

@@ -21,51 +21,60 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     let mounted = true;
 
     const fetchProfile = async (userId: string) => {
-      if (!mounted) return;
+      try {
+        const { data } = await client
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-      const { data } = await client
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-      if (data && mounted) {
-        setProfile(data);
-        setUserRole(data.role);
-      }
-
-      if (mounted) {
-        setLoading(false);
+        if (mounted && data) {
+          setProfile(data);
+          setUserRole(data.role);
+        }
+      } catch (err) {
+        console.error('fetchProfile error:', err);
+      } finally {
+        if (mounted) setLoading(false);
       }
     };
 
-    // Initialize session first
-    client.auth.getSession().then(async ({ data: { session } }) => {
+    client.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return;
 
-      setUser(session?.user || null);
-
       if (session?.user) {
-        await fetchProfile(session.user.id);
+        setUser(session.user);
+        fetchProfile(session.user.id);
       } else {
-        setLoading(false);
-      }
-    });
-
-    // Then listen for auth changes
-    const { data: authListener } = client.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
-
-      setUser(session?.user || null);
-
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      } else {
+        setUser(null);
         setProfile(null);
         setUserRole(null);
         setLoading(false);
       }
     });
+
+    const { data: authListener } = client.auth.onAuthStateChange(
+      (event, session) => {
+        if (!mounted) return;
+
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setProfile(null);
+          setUserRole(null);
+          setLoading(false);
+          return;
+        }
+
+        if (session?.user) {
+          setUser(session.user);
+
+          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+            setLoading(true);
+            fetchProfile(session.user.id);
+          }
+        }
+      }
+    );
 
     return () => {
       mounted = false;
