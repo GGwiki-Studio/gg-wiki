@@ -381,18 +381,73 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
   }
 
   const handleExtractConfirm = async () => {
-    if (!projectId || !userId) return
-    setExtractLoading(true)
-    const { data, error } = await extractStrats(userId, projectId, selectedSlideIds)
-    if (error) {
-      toast.error('Failed to extract strats')
-    } else if (data) {
-      toast.success(`${data.length} strat${data.length > 1 ? 's' : ''} extracted to dashboard`)
-      setSelectedSlideIds([])
-      setExtractOpen(false)
-    }
-    setExtractLoading(false)
+  if (!projectId || !userId) return
+
+  // block extraction if any selected slide has no background
+  const emptySlides = project.slides
+    .filter((s) => selectedSlideIds.includes(s.id))
+    .filter((s) => !s.backgroundImage)
+  if (emptySlides.length > 0) {
+    toast.error(`${emptySlides.map((s) => s.name).join(', ')} ${emptySlides.length === 1 ? 'has' : 'have'} no background map`)
+    return
   }
+
+  setExtractLoading(true)
+
+  // save project first so that the extract works
+  try {
+    const thumbnail = stageRef.current?.toDataURL({ pixelRatio: 0.2 }) || null
+    let thumbnailUrl: string | null = null
+    if (thumbnail) {
+      const match = thumbnail.match(/^data:([^;]+);base64,(.+)$/)
+      if (match) {
+        const path = `${userId}/${projectId}/thumbnail.png`
+        const byteChars = atob(match[2])
+        const byteArray = new Uint8Array(byteChars.length)
+        for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i)
+        const blob = new Blob([byteArray], { type: 'image/png' })
+
+        await client.storage.from('project-assets').upload(path, blob, {
+          contentType: 'image/png',
+          upsert: true,
+        })
+        const { data } = client.storage.from('project-assets').getPublicUrl(path)
+        thumbnailUrl = `${data.publicUrl}?t=${Date.now()}`
+      }
+    }
+    const converted = await convertBase64ToStorageUrls(project, userId, projectId)
+    const { error: saveError } = await saveProject(projectId, userId, converted, CURRENT_SCHEMA_VERSION, thumbnailUrl)
+    if (saveError) {
+      toast.error('Failed to save before extraction')
+      setExtractLoading(false)
+      return
+    }
+    skipDirtyRef.current = true
+    setProject(converted)
+    skipDirtyRef.current = false
+    setHasUnsavedChanges(false)
+  } catch {
+    toast.error('Failed to save before extraction')
+    setExtractLoading(false)
+    return
+  }
+
+  // capture strat thumbnails
+  const thumbnails: Record<string, string> = {}
+  if (stageRef.current && project.activeSlideId && selectedSlideIds.includes(project.activeSlideId)) {
+    thumbnails[project.activeSlideId] = stageRef.current.toDataURL({ pixelRatio: 0.2 })
+  }
+
+  const { data, error } = await extractStrats(userId, projectId, selectedSlideIds, thumbnails)
+  if (error) {
+    toast.error('Failed to extract strats')
+  } else if (data) {
+    toast.success(`${data.length} strat${data.length > 1 ? 's' : ''} extracted to dashboard`)
+    setSelectedSlideIds([])
+    setExtractOpen(false)
+  }
+  setExtractLoading(false)
+}
 
 
   //SLIDE HANDLERS
