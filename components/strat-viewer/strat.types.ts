@@ -34,3 +34,4 @@ export interface StratListItem {
   createdAt: string
   updatedAt: string
 }
+
