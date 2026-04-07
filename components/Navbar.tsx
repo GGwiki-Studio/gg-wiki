@@ -14,6 +14,7 @@ const Navbar = () => {
   const href = "/registration";
   const auth = useAuth()
   const user = auth?.user
+  const userRole = auth?.userRole
   const [showDropDown, setShowDropDown] = useState(false)
   const router = useRouter()
 
@@ -48,10 +49,18 @@ const Navbar = () => {
                 <Image src="/profile.svg" alt="User Icon" width={40} height={40} className={'filter invert'}/>
               </a>
               {showDropDown && user && (
-                <div className="bg-[#252525] absolute top-12 right-4 flex flex-col gap-4 p-4 rounded min-w-37.5">
-                  <a href="/profile" className="cursor-pointer hover:opacity-80">Profile</a>
-                  <a href="/settings" className="cursor-pointer hover:opacity-80">Settings</a>
-                  <a onClick={logOut} className="cursor-pointer hover:opacity-80">Logout</a>
+                <div className="bg-[#252525] absolute top-12 right-4 flex flex-col gap-4 p-4 rounded min-w-37.5 z-50">
+                <a href="/profile" className="cursor-pointer hover:opacity-80">Profile</a>
+                <a href="/settings" className="cursor-pointer hover:opacity-80">Settings</a>
+                {(userRole === 'admin' || userRole === 'moderator') && (
+                  <>
+                  <hr className="border-gray-600" />
+                  <a href="/admin" className="cursor-pointer hover:opacity-80 text-red-400 font-semibold">
+                  🛡️ Admin Dashboard
+                  </a>
+                  </>
+                )}
+                <a onClick={logOut} className="cursor-pointer hover:opacity-80">Logout</a>
                 </div>
               )}
             </div>
