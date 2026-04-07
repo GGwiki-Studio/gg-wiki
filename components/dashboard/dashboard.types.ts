@@ -1,5 +1,4 @@
 import type { StratListItem } from '@/components/strat-viewer/strat.types'
-import type { StratSlideData } from '@/components/strat-viewer/strat.types'
 
 // Dashboard Shell
 
@@ -27,11 +26,8 @@ export interface StratGalleryProps {
   savedStrats: StratListItem[]
   activeTab: GalleryTab
   onSetActiveTab: (tab: GalleryTab) => void
-  onExpandStrat: (id: string) => void
-  onCollapseStrat: () => void
+  onViewStrat: (id: string) => void
   onDeleteStrat: (id: string) => void
-  expandedStratId: string | null
-  expandedSlideData: StratSlideData | null
 }
 
 export interface GalleryTabsProps {
@@ -48,10 +44,7 @@ export interface GalleryToolbarProps {
 export interface StratGalleryCardProps {
   strat: StratListItem
   owned: boolean
-  expanded: boolean
-  slideData: StratSlideData | null
-  onExpand: (id: string) => void
-  onCollapse: () => void
+  onView: (id: string) => void
   onDelete: (id: string) => void
 }
 
@@ -67,4 +60,10 @@ export interface DeleteStratDialogProps {
   stratTitle: string
   onConfirm: () => void
   loading: boolean
+}
+
+export interface StratViewerDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  stratId: string | null
 }
