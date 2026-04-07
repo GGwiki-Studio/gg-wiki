@@ -11,8 +11,11 @@ export default function StratGallery({
   savedStrats,
   activeTab,
   onSetActiveTab,
-  onViewStrat,
+  onExpandStrat,
+  onCollapseStrat,
   onDeleteStrat,
+  expandedStratId,
+  expandedSlideData,
 }: StratGalleryProps) {
   const strats = activeTab === 'my-strats' ? ownedStrats : savedStrats
   const owned = activeTab === 'my-strats'
@@ -42,7 +45,10 @@ export default function StratGallery({
               key={strat.id}
               strat={strat}
               owned={owned}
-              onView={onViewStrat}
+              expanded={expandedStratId === strat.id}
+              slideData={expandedStratId === strat.id ? expandedSlideData : null}
+              onExpand={onExpandStrat}
+              onCollapse={onCollapseStrat}
               onDelete={onDeleteStrat}
             />
           ))}

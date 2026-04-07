@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import useAuth from '@/components/hooks/useAuth'
-import { getOwnedStrats, getSavedStrats, deleteStrat } from '@/lib/actions/strat.actions'
+import { getOwnedStrats, getSavedStrats, deleteStrat, getStrat } from '@/lib/actions/strat.actions'
 import type { StratListItem } from '@/components/strat-viewer/strat.types'
+import type { StratSlideData } from '@/components/strat-viewer/strat.types'
 import type { DashboardSection, GalleryTab } from '@/components/dashboard/dashboard.types'
 import DashboardShell from '@/components/dashboard/DashboardShell'
 import StratGallery from '@/components/dashboard/gallery/StratGallery'
@@ -19,21 +20,21 @@ export default function DashboardPage() {
   const user = auth?.user
   const authLoading = auth?.loading
 
-  // Dashboard state
   const [activeSection, setActiveSection] = useState<DashboardSection>('gallery')
-
-  // Gallery state
   const [activeTab, setActiveTab] = useState<GalleryTab>('my-strats')
   const [ownedStrats, setOwnedStrats] = useState<StratListItem[]>([])
   const [savedStrats, setSavedStrats] = useState<StratListItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Delete dialog state
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
-  // Auth guard
+  // expand state
+  const [expandedStratId, setExpandedStratId] = useState<string | null>(null)
+  const [expandedSlideData, setExpandedSlideData] = useState<StratSlideData | null>(null)
+
+  // auth guard
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/registration')
@@ -44,7 +45,7 @@ export default function DashboardPage() {
     }
   }, [authLoading, user, dashboardUserId, router])
 
-  // Fetch strats
+  // fetch strats
   useEffect(() => {
     if (!user || user.id !== dashboardUserId) return
 
@@ -66,11 +67,24 @@ export default function DashboardPage() {
     fetchStrats()
   }, [user, dashboardUserId])
 
-  // Handlers
+  // expand a card and fetch full strat data
+  const handleExpandStrat = async (id: string) => {
+    setExpandedStratId(id)
+    setExpandedSlideData(null)
 
-  const handleViewStrat = (id: string) => {
-    // Phase 5: open StratViewerDialog
-    toast.info('Strat viewer coming soon')
+    const { data, error } = await getStrat(id, user!.id)
+    if (error || !data) {
+      toast.error('Failed to load strat')
+      setExpandedStratId(null)
+      return
+    }
+
+    setExpandedSlideData(data.slideData)
+  }
+
+  const handleCollapseStrat = () => {
+    setExpandedStratId(null)
+    setExpandedSlideData(null)
   }
 
   const handleDeleteStrat = (id: string) => {
@@ -84,60 +98,52 @@ export default function DashboardPage() {
     if (!user || !deleteTarget) return
     setDeleteLoading(true)
     const { error } = await deleteStrat(deleteTarget.id, user.id)
+
     if (error) {
       toast.error('Failed to delete strat')
     } else {
       setOwnedStrats((prev) => prev.filter((s) => s.id !== deleteTarget.id))
-      setDeleteOpen(false)
+      // collapse if the deleted strat was expanded
+      if (expandedStratId === deleteTarget.id) {
+        handleCollapseStrat()
+      }
       toast.success('Strat deleted')
     }
+
     setDeleteLoading(false)
+    setDeleteOpen(false)
+    setDeleteTarget(null)
   }
 
-
-  // Loading
   if (authLoading || loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <p className="text-sm text-[#555]">Loading...</p>
+      <div className="flex h-screen items-center justify-center bg-[#0e0e0e]">
+        <span className="text-sm text-[#555]">Loading...</span>
       </div>
     )
   }
 
-  if (!user) return null
-
   return (
-    <>
-      <DashboardShell
-        activeSection={activeSection}
-        onSetActiveSection={setActiveSection}
-      >
-        {activeSection === 'gallery' && (
-          <StratGallery
-            ownedStrats={ownedStrats}
-            savedStrats={savedStrats}
-            activeTab={activeTab}
-            onSetActiveTab={setActiveTab}
-            onViewStrat={handleViewStrat}
-            onDeleteStrat={handleDeleteStrat}
-            
-          />
-        )}
-
-        {activeSection === 'analytics' && (
-          <div className="flex items-center justify-center py-20">
-            <p className="text-sm text-[#555]">Analytics coming soon</p>
-          </div>
-        )}
-      </DashboardShell>
+    <DashboardShell activeSection={activeSection} onSetActiveSection={setActiveSection}>
+      <StratGallery
+        ownedStrats={ownedStrats}
+        savedStrats={savedStrats}
+        activeTab={activeTab}
+        onSetActiveTab={setActiveTab}
+        onExpandStrat={handleExpandStrat}
+        onCollapseStrat={handleCollapseStrat}
+        onDeleteStrat={handleDeleteStrat}
+        expandedStratId={expandedStratId}
+        expandedSlideData={expandedSlideData}
+      />
 
       <DeleteStratDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        stratTitle={deleteTarget?.title || ''}
+        stratTitle={deleteTarget?.title ?? ''}
         onConfirm={handleDeleteConfirm}
         loading={deleteLoading}
       />
-    </>
+    </DashboardShell>
   )
 }
