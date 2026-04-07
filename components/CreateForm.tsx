@@ -151,8 +151,12 @@ const CreateForm = () => {
   }
  
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    const strat = await createStrat(data, user.id)
+    if (!user) {
+      toast.error('Please sign in to create a strategy')
+      return
+    }
 
+    const strat = await createStrat(data, user.id)
     if(strat) {
       redirect(`games/${data.game}/maps/${data.map}/strategies/${strat.id}`)
     } else {
