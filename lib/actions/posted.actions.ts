@@ -104,6 +104,8 @@ export const getStrat = async (stratId: string) => {
             view_count,
             created_at,
             strat_url,
+            is_removed,
+            game_id,
             user:user_id (
                 id,
                 username
@@ -118,10 +120,22 @@ export const getStrat = async (stratId: string) => {
             )
         `)
         .eq('id', stratId)
+        .eq('is_removed', false)
         .single()
 
     if (stratError || !stratData) {
         throw new Error(stratError?.message || "Strategy not found")
+    }
+
+    // Verify the associated game is active
+    const { data: gameData } = await client
+        .from('games')
+        .select('is_active')
+        .eq('id', stratData.game_id || '')
+        .single()
+
+    if (!gameData?.is_active) {
+        throw new Error("Strategy not found")
     }
 
     // Fetch tags separately to avoid relationship mismatch errors if the foreign key relation isn't configured.
@@ -366,11 +380,20 @@ export const getAllStrats = async ({ limit = 0, map, topic, gameSlug }: GetAllSt
       }
     }
 
+    // Get all active game IDs to filter strategies
+    const { data: activeGames } = await client
+      .from('games')
+      .select('id')
+      .eq('is_active', true)
+    
+    const activeGameIds = activeGames?.map(g => g.id) || []
+
     let gameIdsBySearch: string[] = []
     if (searchWords.length) {
       const { data: matchingGames } = await client
         .from('games')
         .select('id')
+        .eq('is_active', true)
         .or(searchWords.map((w: string) => `name.ilike.%${w}%`).join(','))
 
       gameIdsBySearch = matchingGames?.map(g => g.id) || []
@@ -408,6 +431,8 @@ export const getAllStrats = async ({ limit = 0, map, topic, gameSlug }: GetAllSt
         game:game_id ( name ),
         map:map_id ( name )
       `)
+      .eq('is_removed', false)
+      .in('game_id', activeGameIds)
       .order('view_count', { ascending: false })
 
     if (gameId) query = query.eq('game_id', gameId)
@@ -479,3 +504,21 @@ export const getAllStrats = async ({ limit = 0, map, topic, gameSlug }: GetAllSt
     return []
   }
 }
+
+// export const deleteStratAsAdmin = async (stratId: string) => {
+//   try {
+//     const { error } = await client
+//       .from('strategies')
+//       .update({ is_removed: true })
+//       .eq('id', stratId)
+
+//     if (error) {
+//       throw new Error(error.message || 'Failed to delete strategy')
+//     }
+
+//     return { success: true, message: 'Strategy deleted successfully' }
+//   } catch (err) {
+//     console.error('Error deleting strategy:', err)
+//     throw err
+//   }
+// }

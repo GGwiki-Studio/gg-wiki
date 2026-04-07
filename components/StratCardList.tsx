@@ -27,6 +27,16 @@ const StratCardList = () => {
     useEffect(() => {
         const fetchStrategies = async () => {
             try {
+                // Get all active game IDs
+                const { data: activeGames, error: gamesError } = await client
+                    .from('games')
+                    .select('id')
+                    .eq('is_active', true)
+
+                if (gamesError) throw gamesError
+
+                const activeGameIds = activeGames?.map(g => g.id) || []
+
                 const { data, error } = await client
                     .from('strategies')
                     .select(`
@@ -45,6 +55,8 @@ const StratCardList = () => {
                             name
                         )
                     `)
+                    .eq('is_removed', false)
+                    .in('game_id', activeGameIds)
                     .order('view_count', { ascending: false })
                     .limit(5);
 
