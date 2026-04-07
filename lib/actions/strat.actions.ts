@@ -22,6 +22,7 @@ function toStratListItem(row: Record<string, unknown>): StratListItem {
     visibility: row.visibility as 'private' | 'public',
     savedFromFeed: row.saved_from_feed as boolean,
     forkedFromId: (row.forked_from_id as string) || null,
+    thumbnailUrl: (row.thumbnail_url as string) || null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   }
@@ -38,6 +39,7 @@ function toStratEntity(row: Record<string, unknown>): StratEntity {
     savedFromFeed: row.saved_from_feed as boolean,
     forkedFromId: (row.forked_from_id as string) || null,
     originalAuthorId: (row.original_author_id as string) || null,
+    thumbnailUrl: (row.thumbnail_url as string) || null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   }
@@ -104,7 +106,8 @@ export async function extractStrat(
   userId: string,
   projectId: string,
   slideId: string,
-  title?: string
+  title?: string,
+  thumbnailDataUrl?: string | null
 ): Promise<ActionResult<StratListItem>> {
   // Fetch the project
   const { data: project, error: projectError } = await getProject(projectId, userId)
@@ -134,28 +137,52 @@ export async function extractStrat(
   // Copy assets to strat-assets bucket so strat is independent
   const copiedSlideData = await copySlideAssets(slideData, userId, row.id)
 
+  // Upload thumbnail
+  let thumbnailUrl: string | null = null
+  if (thumbnailDataUrl) {
+    const match = thumbnailDataUrl.match(/^data:([^;]+);base64,(.+)$/)
+    if (match) {
+      const path = `${userId}/${row.id}/thumbnail.png`
+      const byteChars = atob(match[2])
+      const byteArray = new Uint8Array(byteChars.length)
+      for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i)
+      const blob = new Blob([byteArray], { type: 'image/png' })
+
+      await client.storage.from('strat-assets').upload(path, blob, {
+        contentType: 'image/png',
+        upsert: true,
+      })
+      const { data: urlData } = client.storage.from('strat-assets').getPublicUrl(path)
+      thumbnailUrl = `${urlData.publicUrl}?t=${Date.now()}`
+    }
+  }
+
   // Update with copied asset URLs
   const { error: updateError } = await client
     .from('strats')
-    .update({ slide_data: copiedSlideData })
+    .update({
+      slide_data: copiedSlideData,
+      ...(thumbnailUrl ? { thumbnail_url: thumbnailUrl } : {}),
+    })
     .eq('id', row.id)
     .eq('user_id', userId)
 
   if (updateError) return { data: null, error: updateError.message }
 
-  return { data: toStratListItem(row), error: null }
+  return { data: toStratListItem({ ...row, thumbnail_url: thumbnailUrl }), error: null }
 }
 
 export async function extractStrats(
   userId: string,
   projectId: string,
-  slideIds: string[]
+  slideIds: string[],
+  thumbnails?: Record<string, string>
 ): Promise<ActionResult<StratListItem[]>> {
   const results: StratListItem[] = []
   const errors: string[] = []
 
   for (const slideId of slideIds) {
-    const { data, error } = await extractStrat(userId, projectId, slideId)
+    const { data, error } = await extractStrat( userId, projectId, slideId, undefined, thumbnails?.[slideId] || null)
     if (error) {
       errors.push(error)
     } else if (data) {
@@ -169,13 +196,12 @@ export async function extractStrats(
 
   return { data: results, error: null }
 }
-
 export async function getUserStrats(
   userId: string
 ): Promise<ActionResult<StratListItem[]>> {
   const { data, error } = await client
     .from('strats')
-    .select('id, title, visibility, saved_from_feed, forked_from_id, created_at, updated_at')
+    .select('id, title, visibility, saved_from_feed, forked_from_id, thumbnail_url, created_at, updated_at')
     .eq('user_id', userId)
     .order('updated_at', { ascending: false })
 
@@ -220,7 +246,7 @@ export async function getOwnedStrats(
 ): Promise<ActionResult<StratListItem[]>> {
   const { data, error } = await client
     .from('strats')
-    .select('id, title, visibility, saved_from_feed, forked_from_id, created_at, updated_at')
+    .select('id, title, visibility, saved_from_feed, forked_from_id, thumbnail_url, created_at, updated_at')
     .eq('user_id', userId)
     .eq('saved_from_feed', false)
     .order('updated_at', { ascending: false })
@@ -234,7 +260,7 @@ export async function getSavedStrats(
 ): Promise<ActionResult<StratListItem[]>> {
   const { data, error } = await client
     .from('strats')
-    .select('id, title, visibility, saved_from_feed, forked_from_id, created_at, updated_at')
+    .select('id, title, visibility, saved_from_feed, forked_from_id, thumbnail_url, created_at, updated_at')
     .eq('user_id', userId)
     .eq('saved_from_feed', true)
     .order('updated_at', { ascending: false })

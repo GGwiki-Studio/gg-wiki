@@ -40,7 +40,11 @@ export default function StratGalleryCard({
         className="group cursor-pointer overflow-hidden rounded-[10px] border border-[#2a2a2a] bg-[#1e1e1e] transition-colors hover:border-[#3a3a3a]"
       >
         <div className="flex h-[100px] items-center justify-center overflow-hidden bg-[#252525]">
-          <span className="text-xs text-[#555]">Strat preview</span>
+          {strat.thumbnailUrl ? (
+            <img src={strat.thumbnailUrl} alt={strat.title} className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-xs text-[#555]">No preview</span>
+          )}
         </div>
 
         <div className="p-3.5">
