@@ -20,6 +20,7 @@ export interface StratEntity {
   savedFromFeed: boolean
   forkedFromId: string | null
   originalAuthorId: string | null
+  thumbnailUrl: string | null
   createdAt: string
   updatedAt: string
 }
@@ -31,6 +32,7 @@ export interface StratListItem {
   visibility: 'private' | 'public'
   savedFromFeed: boolean
   forkedFromId: string | null
+  thumbnailUrl: string | null
   createdAt: string
   updatedAt: string
 }
