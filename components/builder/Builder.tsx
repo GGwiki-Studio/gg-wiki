@@ -302,7 +302,7 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
 
   setIsSaving(true)
   try {
-    const thumbnail = stageRef.current?.toDataURL({ pixelRatio: 0.2 }) || null
+    const thumbnail = stageRef.current?.toDataURL({ pixelRatio: 0.5 }) || null
     let thumbnailUrl: string | null = null
     if (thumbnail) {
       const match = thumbnail.match(/^data:([^;]+);base64,(.+)$/)
@@ -405,7 +405,7 @@ const handleExtractConfirm = async () => {
   // capture thumbnail for the currently visible slide
   const thumbnails: Record<string, string> = {}
   if (stageRef.current && project.activeSlideId && selectedSlideIds.includes(project.activeSlideId)) {
-    thumbnails[project.activeSlideId] = stageRef.current.toDataURL({ pixelRatio: 0.2 })
+    thumbnails[project.activeSlideId] = stageRef.current.toDataURL({ pixelRatio: 0.5 })
   }
 
   const { data, error } = await extractStrats(userId, projectId, selectedSlideIds, thumbnails)

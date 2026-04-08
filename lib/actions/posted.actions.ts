@@ -103,7 +103,8 @@ export const getStrat = async (stratId: string) => {
             difficulty,
             view_count,
             created_at,
-            strat_url,
+            strat_id,
+            thumbnail_url,
             is_removed,
             game_id,
             user:user_id (

@@ -180,11 +180,11 @@ const TagInput: React.FC<TagInputProps> = ({value = [], onChange, placeholder = 
 
   return (
     <div className="w-full relative">
-      <div className="flex flex-wrap gap-2 p-2 border rounded-md focus-within:ring-2">
+      <div className="flex flex-wrap gap-2 p-2 border rounded-md focus-within:ring-2 w-full border-[#2a2a2a] bg-[#0d0d0d] px-3 text-sm text-[#ccc] outline-none focus:border-[#3b82f6] transition">
         {tags.map((tag, index) => (
           <div
             key={index}
-            className="flex items-center gap-2 px-3 py-1 rounded-full bg-gray-700 text-white text-sm font-medium"
+            className="flex items-center gap-2 px-3 py-1 rounded-md bg-white text-white text-sm font-medium"
           >
             <span>{tag}</span>
             <button

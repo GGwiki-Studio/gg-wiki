@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
@@ -11,6 +10,10 @@ import { MessageCircle, Eye, Calendar, User, Trophy, ThumbsUp, ThumbsDown } from
 import { toast } from 'sonner'
 import useAuth from '@/components/hooks/useAuth'
 import { getStrat, likeStrat, getComments, addComment, incrementViewCount } from '@/lib/actions/posted.actions'
+import { getPublishedStrat } from '@/lib/actions/post.actions'
+import type { PublishedStrategy } from '@/lib/actions/post.actions'
+import type { StratSlideData } from '@/components/strat-viewer/strat.types'
+import StratViewer from '@/components/strat-viewer/StratViewer'
 import ReportButton from '@/components/ReportButton'
 
 interface Strategy {
@@ -20,8 +23,9 @@ interface Strategy {
     difficulty: string
     view_count: number
     created_at: string
-    strat_url: string
+    strat_id: string | null
     likes_count: number
+    thumbnail_url?: string | null
     user: {
         id: string
         username: string
@@ -52,6 +56,7 @@ const StrategyPage = () => {
     const { user } = useAuth()
 
     const [strategy, setStrategy] = useState<Strategy | null>(null)
+    const [slideData, setSlideData] = useState<StratSlideData | null>(null)
     const [comments, setComments] = useState<Comment[]>([])
     const [newComment, setNewComment] = useState('')
     const [voteType, setVoteType] = useState<'upvote' | 'downvote' | null>(null)
@@ -67,13 +72,19 @@ const StrategyPage = () => {
                 setStrategy(stratData)
                 setVotesCount(stratData.likes_count || 0)
 
+                // fetch slide_data if strat_id exists for the interactive viewer
+                if (stratData.strat_id) {
+                    const { data } = await getPublishedStrat(stratId)
+                    if (data?.slideData) setSlideData(data.slideData)
+                }
+
                 await incrementViewCount(stratId)
                 setStrategy(prev =>
-                prev ? { ...prev, view_count: (prev.view_count || 0) + 1 } : null
+                    prev ? { ...prev, view_count: (prev.view_count || 0) + 1 } : null
                 )
             } catch (error) {
                 const message =
-                error instanceof Error ? error.message : String(error)
+                    error instanceof Error ? error.message : String(error)
                 console.error('Error fetching strategy:', error)
                 setErrorMessage(message)
                 toast.error('Failed to load strategy')
@@ -189,12 +200,12 @@ const StrategyPage = () => {
                     </p>
                     {errorMessage && (
                         <p className="text-red-400 mt-4">
-                        <span className="font-semibold">Error:</span> {errorMessage}
+                            <span className="font-semibold">Error:</span> {errorMessage}
                         </p>
                     )}
                     <p className="text-gray-400 mt-4">
-                    Requested strategy id:{' '}
-                    <span className="font-mono text-sm">{stratId}</span>
+                        Requested strategy id:{' '}
+                        <span className="font-mono text-sm">{stratId}</span>
                     </p>
                 </div>
             </div>
@@ -226,7 +237,6 @@ const StrategyPage = () => {
                             </div>
                         </div>
 
-                        {/* Difficulty Badge + Report Button */}
                         <div className="flex items-center gap-4">
                             <Badge className="bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600 flex items-center gap-2">
                                 <Trophy size={14} /> {strategy.difficulty}
@@ -245,24 +255,32 @@ const StrategyPage = () => {
                         </Badge>
                     </div>
 
-                    {/* Tags */} {strategy.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-6">
-                        {strategy.tags.map((tag, index) => (
-                        <Badge key={index} className="bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600">
-                            {tag}
-                        </Badge>
-                        ))}
-                    </div>
-                    )} {/* Strat image */} {strategy.strat_url && (
-                    <div className="mb-6">
-                        <Image src={strategy.strat_url} alt={strategy.title} width={800} height={400} className="w-full h-64 object-cover rounded-lg" />
-                    </div>
+                    {/* Tags */}
+                    {strategy.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-6">
+                            {strategy.tags.map((tag, index) => (
+                                <Badge key={index} className="bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600">
+                                    {tag}
+                                </Badge>
+                            ))}
+                        </div>
                     )}
+
+                    {/* Strat viewer or thumbnail */}
+                    <div className="mb-6">
+                        {slideData ? (
+                            <StratViewer slideData={slideData} />
+                        ) : strategy.thumbnail_url ? (
+                            <div className="overflow-hidden rounded-lg">
+                                <img src={strategy.thumbnail_url} alt={strategy.title} className="w-full h-64 object-cover rounded-lg" />
+                            </div>
+                        ) : null}
+                    </div>
                 </div>
 
                 {/* Strategy Content */}
                 <Card className="mb-8 bg-gray-950 border-gray-950">
-                    <CardContent className="">
+                    <CardContent>
                         <div className="prose prose-invert max-w-none">
                             <div className="whitespace-pre-wrap text-gray-200 leading-relaxed">
                                 {strategy.content}
@@ -274,11 +292,11 @@ const StrategyPage = () => {
                 {/* Vote and Comment Actions */}
                 <div className="flex items-center gap-4 mb-8">
                     <div className="flex items-center gap-2">
-                        <Button onClick={()=> handleVote('upvote')} className={`flex items-center gap-2 ${ voteType === 'upvote' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-950 hover:bg-gray-600 text-gray-200 border-gray-600' }`} >
-                            <ThumbsUp size={18} className={voteType==='upvote' ? 'fill-current' : ''} />
+                        <Button onClick={() => handleVote('upvote')} className={`flex items-center gap-2 ${voteType === 'upvote' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-950 hover:bg-gray-600 text-gray-200 border-gray-600'}`}>
+                            <ThumbsUp size={18} className={voteType === 'upvote' ? 'fill-current' : ''} />
                         </Button>
-                        <Button onClick={()=> handleVote('downvote')} className={`flex items-center gap-2 ${ voteType === 'downvote' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-950 hover:bg-gray-600 text-gray-200 border-gray-600' }`} >
-                            <ThumbsDown size={18} className={voteType==='downvote' ? 'fill-current' : ''} />
+                        <Button onClick={() => handleVote('downvote')} className={`flex items-center gap-2 ${voteType === 'downvote' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-950 hover:bg-gray-600 text-gray-200 border-gray-600'}`}>
+                            <ThumbsDown size={18} className={voteType === 'downvote' ? 'fill-current' : ''} />
                         </Button>
                         <span className="text-gray-400">
                             {votesCount} {votesCount === 1 ? 'Vote' : 'Votes'}
@@ -296,42 +314,43 @@ const StrategyPage = () => {
                     </CardHeader>
                     <CardContent className="space-y-6">
 
-                        {/* Add Comment */} {user ? (
-                        <div className="space-y-4">
-                            <Textarea placeholder="Add a comment..." value={newComment} onChange={e=> setNewComment(e.target.value)} className="bg-gray-800 border-gray-800 text-white" rows={3} />
+                        {user ? (
+                            <div className="space-y-4">
+                                <Textarea placeholder="Add a comment..." value={newComment} onChange={e => setNewComment(e.target.value)} className="bg-gray-800 border-gray-800 text-white" rows={3} />
                                 <Button onClick={handleAddComment} disabled={submittingComment || !newComment.trim()} className="bg-gray-700 hover:bg-gray-800">
                                     {submittingComment ? 'Posting...' : 'Post Comment'}
                                 </Button>
-                        </div>
+                            </div>
                         ) : (
-                        <div className="text-center py-4 text-gray-400">
-                            Please sign in to comment
-                        </div>
-                        )} {/* Comments List */}
+                            <div className="text-center py-4 text-gray-400">
+                                Please sign in to comment
+                            </div>
+                        )}
+
                         <div className="space-y-4">
                             {comments.length === 0 ? (
-                            <p className="text-gray-400 text-center py-8">
-                                No comments yet. Be the first to comment!
-                            </p>
-                            ) : ( comments.map(comment => (
-                            <div key={comment.id} className="pb-4">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
-                                            <User size={16} />
+                                <p className="text-gray-400 text-center py-8">
+                                    No comments yet. Be the first to comment!
+                                </p>
+                            ) : (comments.map(comment => (
+                                <div key={comment.id} className="pb-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+                                                <User size={16} />
+                                            </div>
+                                            <span className="font-semibold text-gray-200">
+                                                {comment.user.username}
+                                            </span>
+                                            <span className="text-sm text-gray-400">
+                                                {formatDate(comment.created_at)}
+                                            </span>
                                         </div>
-                                        <span className="font-semibold text-gray-200">
-                                            {comment.user.username}
-                                        </span>
-                                        <span className="text-sm text-gray-400">
-                                            {formatDate(comment.created_at)}
-                                        </span>
+                                        <ReportButton contentType="comment" contentId={comment.id} />
                                     </div>
-                                    <ReportButton contentType="comment" contentId={comment.id} />
+                                    <p className="text-gray-200 ml-10">{comment.content}</p>
                                 </div>
-                                <p className="text-gray-200 ml-10">{comment.content}</p>
-                            </div>
-                            )) )}
+                            )))}
                         </div>
 
                     </CardContent>

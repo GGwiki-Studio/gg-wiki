@@ -12,6 +12,7 @@ import type { DashboardSection, GalleryTab } from '@/components/dashboard/dashbo
 import DashboardShell from '@/components/dashboard/DashboardShell'
 import StratGallery from '@/components/dashboard/gallery/StratGallery'
 import DeleteStratDialog from '@/components/dashboard/gallery/DeleteStratDialog'
+import PublishStratDialog from '@/components/dashboard/gallery/PublishStratDialog'
 
 export default function DashboardPage() {
   const params = useParams()
@@ -34,6 +35,10 @@ export default function DashboardPage() {
   // expand state
   const [expandedStratId, setExpandedStratId] = useState<string | null>(null)
   const [expandedSlideData, setExpandedSlideData] = useState<StratSlideData | null>(null)
+
+  // publish state
+  const [publishTarget, setPublishTarget] = useState<StratListItem | null>(null)
+  const [publishOpen, setPublishOpen] = useState(false)
 
   // auth guard
   useEffect(() => {
@@ -151,6 +156,25 @@ export default function DashboardPage() {
     toast.success('Strat renamed')
   }
 
+  // publish
+  const handlePublishStrat = (id: string) => {
+    const strat = ownedStrats.find((s) => s.id === id)
+    if (!strat) return
+    setPublishTarget(strat)
+    setPublishOpen(true)
+  }
+
+  const handlePublished = (strategyId: string, gameSlug: string, mapSlug: string) => {
+    router.push(`/games/${gameSlug}/maps/${mapSlug}/strategies/${strategyId}`)
+  }
+
+  // sync rename from publish dialog back to the list
+  const handlePublishRenamed = (id: string, newTitle: string) => {
+    setOwnedStrats((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, title: newTitle, updatedAt: new Date().toISOString() } : s))
+    )
+  }
+
   if (authLoading || loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#0e0e0e]">
@@ -171,6 +195,7 @@ export default function DashboardPage() {
         onDeleteStrat={handleDeleteStrat}
         onExportStrat={handleExportStrat}
         onRenameStrat={handleRenameStrat}
+        onPublishStrat={handlePublishStrat}
         expandedStratId={expandedStratId}
         expandedSlideData={expandedSlideData}
       />
@@ -181,6 +206,15 @@ export default function DashboardPage() {
         stratTitle={deleteTarget?.title ?? ''}
         onConfirm={handleDeleteConfirm}
         loading={deleteLoading}
+      />
+
+      <PublishStratDialog
+        open={publishOpen}
+        onOpenChange={setPublishOpen}
+        strat={publishTarget}
+        userId={user!.id}
+        onPublished={handlePublished}
+        onRenamed={handlePublishRenamed}
       />
     </DashboardShell>
   )
