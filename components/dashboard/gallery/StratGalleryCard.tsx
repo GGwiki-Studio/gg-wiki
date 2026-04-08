@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { DropdownMenu } from 'radix-ui'
-import { Download, Eye, Minimize2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { Download, Eye, Minimize2, MoreHorizontal, Pencil, Send, Trash2 } from 'lucide-react'
 import type { StratGalleryCardProps } from '../dashboard.types'
 import StratViewer from '@/components/strat-viewer/StratViewer'
 
@@ -32,6 +32,7 @@ export default function StratGalleryCard({
   onDelete,
   onExport,
   onRename,
+  onPublish,
 }: StratGalleryCardProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
@@ -95,6 +96,7 @@ export default function StratGalleryCard({
               onDelete={() => onDelete(strat.id)}
               onExport={() => onExport(strat.id)}
               onRename={startRename}
+              onPublish={() => onPublish(strat.id)}
             />
           </div>
 
@@ -129,6 +131,7 @@ export default function StratGalleryCard({
             onDelete={() => onDelete(strat.id)}
             onExport={() => onExport(strat.id)}
             onRename={startRename}
+            onPublish={() => onPublish(strat.id)}
           />
           <button
             onClick={onCollapse}
@@ -159,12 +162,14 @@ function CardMenu({
   onDelete,
   onExport,
   onRename,
+  onPublish,
 }: {
   owned: boolean
   onExpand: () => void
   onDelete: () => void
   onExport: () => void
   onRename: () => void
+  onPublish: () => void
 }) {
   return (
     <DropdownMenu.Root>
@@ -202,6 +207,14 @@ function CardMenu({
 
           {owned && (
             <>
+              <DropdownMenu.Item
+                onSelect={onPublish}
+                className="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-[#ccc] outline-none hover:bg-[#252525]"
+              >
+                <Send size={14} className="text-[#666]" />
+                Publish
+              </DropdownMenu.Item>
+
               <DropdownMenu.Item
                 onSelect={onRename}
                 className="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-[#ccc] outline-none hover:bg-[#252525]"

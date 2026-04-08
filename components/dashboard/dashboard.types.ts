@@ -32,6 +32,7 @@ export interface StratGalleryProps {
   onDeleteStrat: (id: string) => void
   onExportStrat: (id: string) => void
   onRenameStrat: (id: string, newTitle: string) => void
+  onPublishStrat: (id: string) => void
   expandedStratId: string | null
   expandedSlideData: StratSlideData | null
 }
@@ -57,6 +58,7 @@ export interface StratGalleryCardProps {
   onDelete: (id: string) => void
   onExport: (id: string) => void
   onRename: (id: string, newTitle: string) => void
+  onPublish: (id: string) => void
 }
 
 export interface GalleryEmptyStateProps {
