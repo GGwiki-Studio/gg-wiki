@@ -288,3 +288,37 @@ export async function renameStrat(
   if (error) return { data: null, error: error.message }
   return { data: toStratListItem(data), error: null }
 }
+
+
+export async function toggleStratVisibility(
+  stratId: string,
+  userId: string
+): Promise<ActionResult<{ visibility: 'private' | 'public' }>> {
+  const { data: current, error: fetchError } = await client
+    .from('strats')
+    .select('visibility')
+    .eq('id', stratId)
+    .eq('user_id', userId)
+    .single()
+
+  if (fetchError || !current) return { data: null, error: fetchError?.message || 'Not found' }
+
+  const newVisibility = current.visibility === 'public' ? 'private' : 'public'
+
+  const { error: updateError } = await client
+    .from('strats')
+    .update({ visibility: newVisibility, updated_at: new Date().toISOString() })
+    .eq('id', stratId)
+    .eq('user_id', userId)
+
+  if (updateError) return { data: null, error: updateError.message }
+
+  const newStatus = newVisibility === 'public' ? 'published' : 'hidden'
+  await client
+    .from('strategies')
+    .update({ status: newStatus, updated_at: new Date().toISOString() })
+    .eq('strat_id', stratId)
+    .eq('user_id', userId)
+
+  return { data: { visibility: newVisibility }, error: null }
+}

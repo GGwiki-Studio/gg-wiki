@@ -94,6 +94,12 @@ export async function publishStrat(input: PublishStratInput): Promise<ActionResu
     }
   }
 
+  await client
+    .from('strats')
+    .update({ visibility: 'public', updated_at: new Date().toISOString() })
+    .eq('id', stratId)
+    .eq('user_id', userId)
+
   return { data: { id: row.id }, error: null }
 }
 
@@ -118,6 +124,8 @@ export async function getPublishedStrat(strategyId: string): Promise<ActionResul
       user:user_id ( username )
     `)
     .eq('id', strategyId)
+    .eq('is_removed', false)
+    .eq('status', 'published')
     .single()
 
   if (error || !row) return { data: null, error: error?.message || 'Strategy not found' }

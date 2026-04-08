@@ -17,6 +17,7 @@ export default function StratGallery({
   onExportStrat,
   onRenameStrat,
   onPublishStrat,
+  onToggleVisibility,
   expandedStratId,
   expandedSlideData,
 }: StratGalleryProps) {
@@ -56,6 +57,7 @@ export default function StratGallery({
               onExport={onExportStrat}
               onRename={onRenameStrat}
               onPublish={onPublishStrat}
+              onToggleVisibility={onToggleVisibility}
             />
           ))}
         </div>
