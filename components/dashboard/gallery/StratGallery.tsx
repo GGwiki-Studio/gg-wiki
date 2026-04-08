@@ -20,6 +20,7 @@ export default function StratGallery({
   onToggleVisibility,
   expandedStratId,
   expandedSlideData,
+  publishedStratIds,
 }: StratGalleryProps) {
   const strats = activeTab === 'my-strats' ? ownedStrats : savedStrats
   const owned = activeTab === 'my-strats'
@@ -51,6 +52,7 @@ export default function StratGallery({
               owned={owned}
               expanded={expandedStratId === strat.id}
               slideData={expandedStratId === strat.id ? expandedSlideData : null}
+              isPublished={publishedStratIds.has(strat.id)}
               onExpand={onExpandStrat}
               onCollapse={onCollapseStrat}
               onDelete={onDeleteStrat}

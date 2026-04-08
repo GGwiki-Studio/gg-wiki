@@ -27,6 +27,7 @@ export default function StratGalleryCard({
   owned,
   expanded,
   slideData,
+  isPublished,
   onExpand,
   onCollapse,
   onDelete,
@@ -94,6 +95,7 @@ export default function StratGalleryCard({
             <CardMenu
               owned={owned}
               visibility={strat.visibility}
+              isPublished={isPublished}
               onExpand={() => onExpand(strat.id)}
               onDelete={() => onDelete(strat.id)}
               onExport={() => onExport(strat.id)}
@@ -136,6 +138,7 @@ export default function StratGalleryCard({
           <CardMenu
             owned={owned}
             visibility={strat.visibility}
+            isPublished={isPublished}
             onExpand={() => onExpand(strat.id)}
             onDelete={() => onDelete(strat.id)}
             onExport={() => onExport(strat.id)}
@@ -169,6 +172,7 @@ export default function StratGalleryCard({
 function CardMenu({
   owned,
   visibility,
+  isPublished,
   onExpand,
   onDelete,
   onExport,
@@ -178,6 +182,7 @@ function CardMenu({
 }: {
   owned: boolean
   visibility: 'private' | 'public'
+  isPublished: boolean
   onExpand: () => void
   onDelete: () => void
   onExport: () => void
@@ -221,24 +226,28 @@ function CardMenu({
 
           {owned && (
             <>
-              <DropdownMenu.Item
-                onSelect={onPublish}
-                className="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-[#ccc] outline-none hover:bg-[#252525]"
-              >
-                <Send size={14} className="text-[#666]" />
-                Publish
-              </DropdownMenu.Item>
+              {!isPublished && (
+                <DropdownMenu.Item
+                  onSelect={onPublish}
+                  className="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-[#ccc] outline-none hover:bg-[#252525]"
+                >
+                  <Send size={14} className="text-[#666]" />
+                  Publish
+                </DropdownMenu.Item>
+              )}
 
-              <DropdownMenu.Item
-                onSelect={onToggleVisibility}
-                className="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-[#ccc] outline-none hover:bg-[#252525]"
-              >
-                {visibility === 'public' ? (
-                  <><Lock size={14} className="text-[#666]" /> Set to private</>
-                ) : (
-                  <><Globe size={14} className="text-[#666]" /> Set to public</>
-                )}
-              </DropdownMenu.Item>
+              {isPublished && (
+                <DropdownMenu.Item
+                  onSelect={onToggleVisibility}
+                  className="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-[#ccc] outline-none hover:bg-[#252525]"
+                >
+                  {visibility === 'public' ? (
+                    <><Lock size={14} className="text-[#666]" /> Set to private</>
+                  ) : (
+                    <><Globe size={14} className="text-[#666]" /> Set to public</>
+                  )}
+                </DropdownMenu.Item>
+              )}
 
               <DropdownMenu.Item
                 onSelect={onRename}

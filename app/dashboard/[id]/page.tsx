@@ -13,6 +13,7 @@ import DashboardShell from '@/components/dashboard/DashboardShell'
 import StratGallery from '@/components/dashboard/gallery/StratGallery'
 import DeleteStratDialog from '@/components/dashboard/gallery/DeleteStratDialog'
 import PublishStratDialog from '@/components/dashboard/gallery/PublishStratDialog'
+import { client } from '@/api/client'
 
 export default function DashboardPage() {
   const params = useParams()
@@ -39,6 +40,7 @@ export default function DashboardPage() {
   // publish state
   const [publishTarget, setPublishTarget] = useState<StratListItem | null>(null)
   const [publishOpen, setPublishOpen] = useState(false)
+  const [publishedStratIds, setPublishedStratIds] = useState<Set<string>>(new Set())
 
   // auth guard
   useEffect(() => {
@@ -67,6 +69,18 @@ export default function DashboardPage() {
       if (ownedResult.error || savedResult.error) {
         toast.error('Failed to load some strats')
       }
+
+      // fetch which strats have been published
+      const { data: publishedRows } = await client
+        .from('strategies')
+        .select('strat_id')
+        .eq('user_id', user.id)
+        .not('strat_id', 'is', null)
+
+      if (publishedRows) {
+        setPublishedStratIds(new Set(publishedRows.map((r: any) => r.strat_id)))
+      }
+
       setLoading(false)
     }
 
@@ -180,6 +194,9 @@ export default function DashboardPage() {
   }
 
   const handlePublished = (strategyId: string, gameSlug: string, mapSlug: string) => {
+    if (publishTarget) {
+      setPublishedStratIds((prev) => new Set([...prev, publishTarget.id]))
+    }
     router.push(`/games/${gameSlug}/maps/${mapSlug}/strategies/${strategyId}`)
   }
 
@@ -214,6 +231,7 @@ export default function DashboardPage() {
         expandedStratId={expandedStratId}
         expandedSlideData={expandedSlideData}
         onToggleVisibility={handleToggleVisibility}
+        publishedStratIds={publishedStratIds}
       />
 
       <DeleteStratDialog

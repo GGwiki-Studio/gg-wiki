@@ -34,6 +34,7 @@ export interface StratGalleryProps {
   onRenameStrat: (id: string, newTitle: string) => void
   onPublishStrat: (id: string) => void
   onToggleVisibility: (id: string) => void
+  publishedStratIds: Set<string>
   expandedStratId: string | null
   expandedSlideData: StratSlideData | null
 }
@@ -54,6 +55,7 @@ export interface StratGalleryCardProps {
   owned: boolean
   expanded: boolean
   slideData: StratSlideData | null
+  isPublished: boolean
   onExpand: (id: string) => void
   onCollapse: () => void
   onDelete: (id: string) => void
