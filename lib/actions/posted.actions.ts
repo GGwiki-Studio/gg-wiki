@@ -122,6 +122,7 @@ export const getStrat = async (stratId: string) => {
         `)
         .eq('id', stratId)
         .eq('is_removed', false)
+        .eq('status', 'published')
         .single()
 
     if (stratError || !stratData) {
@@ -433,6 +434,7 @@ export const getAllStrats = async ({ limit = 0, map, topic, gameSlug }: GetAllSt
         map:map_id ( name )
       `)
       .eq('is_removed', false)
+      .eq('status', 'published')
       .in('game_id', activeGameIds)
       .order('view_count', { ascending: false })
 

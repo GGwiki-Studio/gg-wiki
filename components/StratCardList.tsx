@@ -56,6 +56,7 @@ const StratCardList = () => {
                         )
                     `)
                     .eq('is_removed', false)
+                    .eq('status', 'published')
                     .in('game_id', activeGameIds)
                     .order('view_count', { ascending: false })
                     .limit(5);

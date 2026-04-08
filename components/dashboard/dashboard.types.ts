@@ -33,6 +33,8 @@ export interface StratGalleryProps {
   onExportStrat: (id: string) => void
   onRenameStrat: (id: string, newTitle: string) => void
   onPublishStrat: (id: string) => void
+  onToggleVisibility: (id: string) => void
+  publishedStratIds: Set<string>
   expandedStratId: string | null
   expandedSlideData: StratSlideData | null
 }
@@ -53,12 +55,14 @@ export interface StratGalleryCardProps {
   owned: boolean
   expanded: boolean
   slideData: StratSlideData | null
+  isPublished: boolean
   onExpand: (id: string) => void
   onCollapse: () => void
   onDelete: (id: string) => void
   onExport: (id: string) => void
   onRename: (id: string, newTitle: string) => void
   onPublish: (id: string) => void
+  onToggleVisibility: (id: string) => void
 }
 
 export interface GalleryEmptyStateProps {

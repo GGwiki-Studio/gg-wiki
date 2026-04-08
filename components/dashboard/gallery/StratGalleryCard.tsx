@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { DropdownMenu } from 'radix-ui'
-import { Download, Eye, Minimize2, MoreHorizontal, Pencil, Send, Trash2 } from 'lucide-react'
+import { Download, Eye, Globe, Lock, Minimize2, MoreHorizontal, Pencil, Send, Trash2 } from 'lucide-react'
 import type { StratGalleryCardProps } from '../dashboard.types'
 import StratViewer from '@/components/strat-viewer/StratViewer'
 
@@ -27,12 +27,14 @@ export default function StratGalleryCard({
   owned,
   expanded,
   slideData,
+  isPublished,
   onExpand,
   onCollapse,
   onDelete,
   onExport,
   onRename,
   onPublish,
+  onToggleVisibility,
 }: StratGalleryCardProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
@@ -92,21 +94,24 @@ export default function StratGalleryCard({
             {titleElement}
             <CardMenu
               owned={owned}
+              visibility={strat.visibility}
+              isPublished={isPublished}
               onExpand={() => onExpand(strat.id)}
               onDelete={() => onDelete(strat.id)}
               onExport={() => onExport(strat.id)}
               onRename={startRename}
               onPublish={() => onPublish(strat.id)}
+              onToggleVisibility={() => onToggleVisibility(strat.id)}
             />
           </div>
 
           <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
             <span className="text-[11px] text-[#444]">{timeAgo(strat.updatedAt)}</span>
-            {!owned && strat.forkedFromId && (
-              <span className="rounded bg-[#1a1a2e] px-2 py-0.5 text-[10px] text-[#818cf8]">
-                Forked
-              </span>
-            )}
+            <span className={`text-[10px] ${strat.visibility === 'public' ? 'text-green-500' : 'text-[#666]'}`}>
+              {strat.visibility === 'public' ? 'Public' : 'Private'}
+            </span>
+          </div>
           </div>
         </div>
       </div>
@@ -121,17 +126,25 @@ export default function StratGalleryCard({
           {editing ? titleElement : (
             <h3 className="text-sm font-medium text-[#eee]">{strat.title}</h3>
           )}
-          <span className="text-[11px] text-[#555]">{timeAgo(strat.updatedAt)}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-[#555]">{timeAgo(strat.updatedAt)}</span>
+            <span className={`text-[10px] ${strat.visibility === 'public' ? 'text-green-500' : 'text-[#666]'}`}>
+              {strat.visibility === 'public' ? 'Public' : 'Private'}
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
           <CardMenu
             owned={owned}
+            visibility={strat.visibility}
+            isPublished={isPublished}
             onExpand={() => onExpand(strat.id)}
             onDelete={() => onDelete(strat.id)}
             onExport={() => onExport(strat.id)}
             onRename={startRename}
             onPublish={() => onPublish(strat.id)}
+            onToggleVisibility={() => onToggleVisibility(strat.id)}
           />
           <button
             onClick={onCollapse}
@@ -158,18 +171,24 @@ export default function StratGalleryCard({
 
 function CardMenu({
   owned,
+  visibility,
+  isPublished,
   onExpand,
   onDelete,
   onExport,
   onRename,
   onPublish,
+  onToggleVisibility,
 }: {
   owned: boolean
+  visibility: 'private' | 'public'
+  isPublished: boolean
   onExpand: () => void
   onDelete: () => void
   onExport: () => void
   onRename: () => void
   onPublish: () => void
+  onToggleVisibility: () => void
 }) {
   return (
     <DropdownMenu.Root>
@@ -207,13 +226,28 @@ function CardMenu({
 
           {owned && (
             <>
-              <DropdownMenu.Item
-                onSelect={onPublish}
-                className="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-[#ccc] outline-none hover:bg-[#252525]"
-              >
-                <Send size={14} className="text-[#666]" />
-                Publish
-              </DropdownMenu.Item>
+              {!isPublished && (
+                <DropdownMenu.Item
+                  onSelect={onPublish}
+                  className="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-[#ccc] outline-none hover:bg-[#252525]"
+                >
+                  <Send size={14} className="text-[#666]" />
+                  Publish
+                </DropdownMenu.Item>
+              )}
+
+              {isPublished && (
+                <DropdownMenu.Item
+                  onSelect={onToggleVisibility}
+                  className="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-[#ccc] outline-none hover:bg-[#252525]"
+                >
+                  {visibility === 'public' ? (
+                    <><Lock size={14} className="text-[#666]" /> Set to private</>
+                  ) : (
+                    <><Globe size={14} className="text-[#666]" /> Set to public</>
+                  )}
+                </DropdownMenu.Item>
+              )}
 
               <DropdownMenu.Item
                 onSelect={onRename}

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import useAuth from '@/components/hooks/useAuth'
-import { getOwnedStrats, getSavedStrats, deleteStrat, getStrat, renameStrat } from '@/lib/actions/strat.actions'
+import { getOwnedStrats, getSavedStrats, deleteStrat, getStrat, renameStrat, toggleStratVisibility } from '@/lib/actions/strat.actions'
 import { generateStratHtml } from '@/lib/export/strat-html-export'
 import type { StratListItem } from '@/components/strat-viewer/strat.types'
 import type { StratSlideData } from '@/components/strat-viewer/strat.types'
@@ -13,6 +13,7 @@ import DashboardShell from '@/components/dashboard/DashboardShell'
 import StratGallery from '@/components/dashboard/gallery/StratGallery'
 import DeleteStratDialog from '@/components/dashboard/gallery/DeleteStratDialog'
 import PublishStratDialog from '@/components/dashboard/gallery/PublishStratDialog'
+import { client } from '@/api/client'
 
 export default function DashboardPage() {
   const params = useParams()
@@ -39,6 +40,7 @@ export default function DashboardPage() {
   // publish state
   const [publishTarget, setPublishTarget] = useState<StratListItem | null>(null)
   const [publishOpen, setPublishOpen] = useState(false)
+  const [publishedStratIds, setPublishedStratIds] = useState<Set<string>>(new Set())
 
   // auth guard
   useEffect(() => {
@@ -67,6 +69,18 @@ export default function DashboardPage() {
       if (ownedResult.error || savedResult.error) {
         toast.error('Failed to load some strats')
       }
+
+      // fetch which strats have been published
+      const { data: publishedRows } = await client
+        .from('strategies')
+        .select('strat_id')
+        .eq('user_id', user.id)
+        .not('strat_id', 'is', null)
+
+      if (publishedRows) {
+        setPublishedStratIds(new Set(publishedRows.map((r: any) => r.strat_id)))
+      }
+
       setLoading(false)
     }
 
@@ -156,6 +170,21 @@ export default function DashboardPage() {
     toast.success('Strat renamed')
   }
 
+  const handleToggleVisibility = async (id: string) => {
+    if (!user) return
+
+    const { data, error } = await toggleStratVisibility(id, user.id)
+    if (error) {
+      toast.error('Failed to update visibility')
+      return
+    }
+
+    setOwnedStrats((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, visibility: data!.visibility, updatedAt: new Date().toISOString() } : s))
+    )
+    toast.success(data!.visibility === 'public' ? 'Strat set to public' : 'Strat set to private')
+  }
+
   // publish
   const handlePublishStrat = (id: string) => {
     const strat = ownedStrats.find((s) => s.id === id)
@@ -165,6 +194,9 @@ export default function DashboardPage() {
   }
 
   const handlePublished = (strategyId: string, gameSlug: string, mapSlug: string) => {
+    if (publishTarget) {
+      setPublishedStratIds((prev) => new Set([...prev, publishTarget.id]))
+    }
     router.push(`/games/${gameSlug}/maps/${mapSlug}/strategies/${strategyId}`)
   }
 
@@ -198,6 +230,8 @@ export default function DashboardPage() {
         onPublishStrat={handlePublishStrat}
         expandedStratId={expandedStratId}
         expandedSlideData={expandedSlideData}
+        onToggleVisibility={handleToggleVisibility}
+        publishedStratIds={publishedStratIds}
       />
 
       <DeleteStratDialog
