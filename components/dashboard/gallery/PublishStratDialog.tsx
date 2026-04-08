@@ -72,10 +72,7 @@ export default function PublishStratDialog({
  
     const fetchGames = async () => {
       setLoading(true)
-      const { data, error } = await client
-        .from('games')
-        .select('id, name, slug')
-        .order('name')
+      const { data, error } = await client.from('games').select('id, name, slug').eq('is_active', true).order('name')
  
       if (data) setGames(data)
       if (error) toast.error('Failed to load games')

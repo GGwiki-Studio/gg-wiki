@@ -184,7 +184,7 @@ const TagInput: React.FC<TagInputProps> = ({value = [], onChange, placeholder = 
         {tags.map((tag, index) => (
           <div
             key={index}
-            className="flex items-center gap-2 px-3 py-1 rounded-md bg-white text-white text-sm font-medium"
+            className="flex items-center gap-2 px-3 py-1 rounded-md text-white text-sm font-medium"
           >
             <span>{tag}</span>
             <button
