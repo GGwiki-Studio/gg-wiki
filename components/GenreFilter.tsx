@@ -62,6 +62,7 @@ function PageContent(){
           <SelectItem value="puzzle">Puzzle</SelectItem>
           <SelectItem value="shooter">Shooter</SelectItem>
           <SelectItem value="moba">Moba</SelectItem>
+          <SelectItem value="platformer">Platformer</SelectItem>
         </SelectGroup>
       </SelectContent>
     </Select>
