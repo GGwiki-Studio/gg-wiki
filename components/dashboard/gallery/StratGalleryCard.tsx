@@ -31,7 +31,6 @@ export default function StratGalleryCard({
   onExpand,
   onCollapse,
   onDelete,
-  onExport,
   onRename,
   onPublish,
   onToggleVisibility,
@@ -98,7 +97,6 @@ export default function StratGalleryCard({
               isPublished={isPublished}
               onExpand={() => onExpand(strat.id)}
               onDelete={() => onDelete(strat.id)}
-              onExport={() => onExport(strat.id)}
               onRename={startRename}
               onPublish={() => onPublish(strat.id)}
               onToggleVisibility={() => onToggleVisibility(strat.id)}
@@ -141,7 +139,6 @@ export default function StratGalleryCard({
             isPublished={isPublished}
             onExpand={() => onExpand(strat.id)}
             onDelete={() => onDelete(strat.id)}
-            onExport={() => onExport(strat.id)}
             onRename={startRename}
             onPublish={() => onPublish(strat.id)}
             onToggleVisibility={() => onToggleVisibility(strat.id)}
@@ -175,7 +172,6 @@ function CardMenu({
   isPublished,
   onExpand,
   onDelete,
-  onExport,
   onRename,
   onPublish,
   onToggleVisibility,
@@ -185,7 +181,6 @@ function CardMenu({
   isPublished: boolean
   onExpand: () => void
   onDelete: () => void
-  onExport: () => void
   onRename: () => void
   onPublish: () => void
   onToggleVisibility: () => void
@@ -214,14 +209,6 @@ function CardMenu({
           >
             <Eye size={14} className="text-[#666]" />
             View
-          </DropdownMenu.Item>
-
-          <DropdownMenu.Item
-            onSelect={onExport}
-            className="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-[#ccc] outline-none hover:bg-[#252525]"
-          >
-            <Download size={14} className="text-[#666]" />
-            Save as HTML
           </DropdownMenu.Item>
 
           {owned && (
