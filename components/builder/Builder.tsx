@@ -414,8 +414,7 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
       // capture thumbnail for the currently visible slide
       const thumbnails: Record<string, string> = {}
       if (stageRef.current && project.activeSlideId && selectedSlideIds.includes(project.activeSlideId)) {
-        thumbnails[project.activeSlideId] = stageRef.current.toDataURL({ pixelRatio: 0.5 })
-      }
+      thumbnails[project.activeSlideId] = stageRef.current.toDataURL({ pixelRatio: 1 })      }
 
       const { data, error } = await extractStrats(userId, projectId, selectedSlideIds, thumbnails)
       if (error) {

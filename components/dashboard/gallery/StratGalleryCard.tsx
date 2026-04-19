@@ -80,9 +80,9 @@ export default function StratGalleryCard({
         onClick={() => !editing && onExpand(strat.id)}
         className="group cursor-pointer overflow-hidden rounded-[10px] border border-[#2a2a2a] bg-[#1e1e1e] transition-colors hover:border-[#3a3a3a]"
       >
-        <div className="flex h-[100px] items-center justify-center overflow-hidden bg-[#252525]">
+        <div className="flex aspect-[11/7] items-center justify-center overflow-hidden bg-[#252525]">
           {strat.thumbnailUrl ? (
-            <img src={strat.thumbnailUrl} alt={strat.title} className="h-full w-full object-cover" />
+            <img src={strat.thumbnailUrl} alt={strat.title} className="h-full w-full object-contain" />
           ) : (
             <span className="text-xs text-[#555]">No preview</span>
           )}
@@ -152,10 +152,11 @@ export default function StratGalleryCard({
           </button>
         </div>
       </div>
-
-      <div className="p-3">
+        <div className="p-3">
         {slideData ? (
-          <StratViewer slideData={slideData} />
+          <div className="mx-auto max-w-[1024px]">
+            <StratViewer slideData={slideData} />
+          </div>
         ) : (
           <div className="flex h-[200px] items-center justify-center">
             <span className="text-xs text-[#555]">Loading strat...</span>
