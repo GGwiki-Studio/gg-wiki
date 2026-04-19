@@ -1,7 +1,6 @@
 import { client } from '@/api/client'
 
-export type UserRole = 'user' | 'admin'
-
+export type UserRole = 'user' | 'admin' | 'moderator'
 // ============ USER MANAGEMENT ============
 export async function getAllUsers(page = 1, pageSize = 50) {
     const start = (page - 1) * pageSize

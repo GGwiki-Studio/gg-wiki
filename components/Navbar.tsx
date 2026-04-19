@@ -52,12 +52,12 @@ const Navbar = () => {
             <div className="bg-[#252525] absolute top-12 right-4 flex flex-col gap-4 p-4 rounded min-w-37.5 z-50">
               <a href="/profile" className="cursor-pointer hover:opacity-80">Profile</a>
               {/* <a href="/settings" className="cursor-pointer hover:opacity-80">Settings</a> */}
-              {userRole === 'admin' && (
+              {(userRole === 'admin' || userRole === 'moderator') && (
                 <>
-                <hr className="border-gray-600" />
-                <a href="/admin" className="cursor-pointer hover:opacity-80 text-red-400 font-semibold">
-                🛡️ Admin Dashboard
-                </a>
+                  <hr className="border-gray-600" />
+                  <a href="/admin" className={`cursor-pointer hover:opacity-80 font-semibold ${userRole === 'admin' ? 'text-red-400' : 'text-purple-400'}`}>
+                    🛡 {userRole === 'admin' ? 'Admin Dashboard' : 'Mod Dashboard'}
+                  </a>
                 </>
               )}
               <a onClick={logOut} className="cursor-pointer hover:opacity-80">Logout</a>

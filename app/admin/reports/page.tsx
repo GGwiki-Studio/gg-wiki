@@ -78,6 +78,8 @@ function NoteModal({
 
 export default function AdminReports() {
     const { user, userRole, loading } = useAuth()
+const isAdmin = userRole === 'admin'
+const isModerator = userRole === 'moderator'
     const router = useRouter()
     const [reports, setReports] = useState<ReportWithContent[]>([])
     const [dataLoading, setDataLoading] = useState(true)
@@ -96,7 +98,7 @@ export default function AdminReports() {
 
     useEffect(() => {
         if (loading) return
-            if (!user || userRole !== 'admin') {
+            if (!user || (userRole !== 'admin' && userRole !== 'moderator')) {
                 router.push('/')
                 return
             }
@@ -331,7 +333,7 @@ export default function AdminReports() {
         })
     }
 
-    if (loading || !user || userRole !== 'admin') {
+    if (loading || !user || (userRole !== 'admin' && userRole !== 'moderator')) {
         return (
             <div className="min-h-screen flex items-center justify-center">
             <p className="text-xl">Loading...</p>
