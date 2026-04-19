@@ -14,27 +14,27 @@ export async function convertBase64ToStorageUrls(
 ): Promise<BuilderProject> {
   const updated = structuredClone(project)
 
+  const uploads: Promise<void>[] = []
+
   // Convert slide background images
   for (const slide of updated.slides) {
     if (slide.backgroundImage && isBase64(slide.backgroundImage)) {
-      const { url, error } = await uploadBase64Asset(
-        userId, projectId, slide.backgroundImage, 'backgrounds'
+      uploads.push(
+        uploadBase64Asset(userId, projectId, slide.backgroundImage, 'backgrounds').then(({ url, error }) => {
+          if (!error && url) slide.backgroundImage = url
+        })
       )
-      if (!error && url) {
-        slide.backgroundImage = url
-      }
     }
   }
 
   // Convert uploaded icons
   for (const icon of updated.uploadedIcons) {
     if (isBase64(icon.src)) {
-      const { url, error } = await uploadBase64Asset(
-        userId, projectId, icon.src, 'icons'
+      uploads.push(
+        uploadBase64Asset(userId, projectId, icon.src, 'icons').then(({ url, error }) => {
+          if (!error && url) icon.src = url
+        })
       )
-      if (!error && url) {
-        icon.src = url
-      }
     }
   }
 
@@ -43,15 +43,15 @@ export async function convertBase64ToStorageUrls(
     for (const obj of slide.objects) {
       if ((obj.type === 'image' || obj.type === 'icon') && isBase64(obj.src)) {
         const folder = obj.type === 'image' ? 'backgrounds' : 'icons'
-        const { url, error } = await uploadBase64Asset(
-          userId, projectId, obj.src, folder
+        uploads.push(
+          uploadBase64Asset(userId, projectId, obj.src, folder).then(({ url, error }) => {
+            if (!error && url) obj.src = url
+          })
         )
-        if (!error && url) {
-          obj.src = url
-        }
       }
     }
   }
 
+  await Promise.all(uploads)
   return updated
 }
