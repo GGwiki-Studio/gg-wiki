@@ -196,7 +196,8 @@ return (
       </section>
       <hr className="border-[#333] mx-8" />
       <StratCardList />
-      <div className="items-center flex-col text-center bg-linear-to-br from-gray-800 to-black flex mt-8">
+        <div className="items-center flex-col text-center bg-[#1a1a1a] flex mt-8 py-6 border-t border-[#333]">
+        <p className="text-[#666] text-sm">&copy; 2026 GGWIKI. All rights reserved.</p>
       </div>
     </main>
   )
