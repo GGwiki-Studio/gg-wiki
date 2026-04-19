@@ -85,6 +85,31 @@ const HomeCarousel = () => {
     fetchJoinedGames()
   }, [user])
 
+  // Live update when join/leave happens
+  useEffect(() => {
+    const handleChange = () => {
+      if (!user) return
+      client
+        .from('profile_games')
+        .select('game_id, game:game_id (slug, name, cover_image_url)')
+        .eq('profile_id', user.id)
+        .limit(MAX_SLOTS)
+        .then(({ data }) => {
+          const joined = (data || [])
+            .map((row: any) => {
+              const game = Array.isArray(row.game) ? row.game[0] : row.game
+              if (!game) return null
+              return { slug: game.slug, name: game.name, cover_image_url: game.cover_image_url }
+            })
+            .filter(Boolean) as CarouselGame[]
+          setGames(joined)
+        })
+    }
+
+    window.addEventListener('game-membership-changed', handleChange)
+    return () => window.removeEventListener('game-membership-changed', handleChange)
+  }, [user])
+
   const emptySlots = MAX_SLOTS - games.length
   const totalItems = MAX_SLOTS
 
@@ -137,12 +162,11 @@ const HomeCarousel = () => {
 
   const visibleIndex = getActiveFromScroll(scrollX)
 
-  // Background from active game card (if it's a real game, not empty slot)
   const activeGame = visibleIndex < games.length ? games[visibleIndex] : null
 
   return (
     <section className="relative overflow-hidden select-none">
-      {/* Blurry background */}
+      
       <div className="absolute inset-0 z-0">
         {activeGame && (
           <Image
@@ -159,7 +183,7 @@ const HomeCarousel = () => {
       </div>
 
       <div className="relative z-10 py-10">
-        {/* Arrows */}
+      
         <button onClick={() => navigate(-1)}
           className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-black/60 transition-all cursor-pointer backdrop-blur-sm">
           <ChevronLeft size={20} />
@@ -169,7 +193,6 @@ const HomeCarousel = () => {
           <ChevronRight size={20} />
         </button>
 
-        {/* Track */}
         <div
           ref={containerRef}
           onMouseDown={onMouseDown}
@@ -192,7 +215,7 @@ const HomeCarousel = () => {
               paddingRight: `calc(50% - ${CARD_W / 2}px)`,
             }}
           >
-            {/* Joined game cards */}
+
             {games.map((game, i) => {
               const isActive = i === visibleIndex
               const dist = Math.abs(i - visibleIndex)
@@ -222,7 +245,9 @@ const HomeCarousel = () => {
               )
             })}
 
-            {/* Empty join slots */}
+
+
+
             {[...Array(emptySlots)].map((_, i) => {
               const slotIndex = games.length + i
               const isActive = slotIndex === visibleIndex
@@ -250,8 +275,6 @@ const HomeCarousel = () => {
             })}
           </div>
         </div>
-
-        {/* Collection progress */}
         <div className="text-center mt-5">
           <p className="text-sm text-[#999]">
             {games.length === 0
@@ -266,8 +289,6 @@ const HomeCarousel = () => {
             <p className="text-xs text-[#888] mt-1">Collection complete!</p>
           )}
         </div>
-
-        {/* Dots */}
         <div className="flex justify-center gap-1.5 mt-3">
           {[...Array(totalItems)].map((_, i) => (
             <button key={i} onClick={() => scrollToIndex(i)}

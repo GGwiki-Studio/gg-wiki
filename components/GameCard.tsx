@@ -50,6 +50,7 @@ const GameCard = ({ gameId, gameSlug, name, thumbnailUrl, members }: GameCardPro
             } else {
                 setJoined(false)
                 setMemberCount((prev) => Math.max(0, prev - 1))
+                window.dispatchEvent(new Event('game-membership-changed'))
             }
         } else {
             const { error } = await joinGame(user.id, gameId)
@@ -58,6 +59,7 @@ const GameCard = ({ gameId, gameSlug, name, thumbnailUrl, members }: GameCardPro
             } else {
                 setJoined(true)
                 setMemberCount((prev) => prev + 1)
+                window.dispatchEvent(new Event('game-membership-changed'))
             }
         }
         setLoading(false)
