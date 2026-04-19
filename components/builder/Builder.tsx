@@ -133,21 +133,33 @@ const CanvasImageObject = memo(({
   onSelect,
   onDragEnd,
   onTransformEnd,
-  nodeRef,
+  objectNodeMapRef,
 }: {
   object: ImageBuilderObject | IconBuilderObject
   isSelected: boolean
-  onSelect: () => void
-  onDragEnd: (x: number, y: number) => void
-  onTransformEnd: (node: Konva.Image) => void
-  nodeRef: (node: Konva.Image | null) => void
+  onSelect: (objectId: string) => void
+  onDragEnd: (objectId: string, x: number, y: number) => void
+  onTransformEnd: (objectId: string, node: Konva.Node) => void
+  objectNodeMapRef: React.MutableRefObject<Record<string, Konva.Node | null>>
 }) => {
   const image = useLoadedImage(object.src)
+
+  const handleSelect = useCallback(() => onSelect(object.id), [onSelect, object.id])
+  const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+    onDragEnd(object.id, e.target.x(), e.target.y())
+  }, [onDragEnd, object.id])
+  const handleTransformEnd = useCallback((e: Konva.KonvaEventObject<Event>) => {
+    onTransformEnd(object.id, e.target as Konva.Node)
+  }, [onTransformEnd, object.id])
+  const handleRef = useCallback((node: Konva.Image | null) => {
+    objectNodeMapRef.current[object.id] = node
+  }, [objectNodeMapRef, object.id])
+
   if (!image) return null
 
   return (
     <KonvaImage
-      ref={nodeRef}
+      ref={handleRef}
       image={image}
       x={object.canvas.x}
       y={object.canvas.y}
@@ -157,10 +169,10 @@ const CanvasImageObject = memo(({
       opacity={object.canvas.opacity}
       visible={object.canvas.visible}
       draggable={!object.canvas.locked}
-      onClick={onSelect}
-      onTap={onSelect}
-      onDragEnd={(e) => onDragEnd(e.target.x(), e.target.y())}
-      onTransformEnd={(e) => onTransformEnd(e.target as Konva.Image)}
+      onClick={handleSelect}
+      onTap={handleSelect}
+      onDragEnd={handleDragEnd}
+      onTransformEnd={handleTransformEnd}
       shadowEnabled={isSelected}
       shadowColor={isSelected ? '#60a5fa' : undefined}
       shadowBlur={isSelected ? 12 : 0}
@@ -307,15 +319,16 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
     if (thumbnail) {
       const match = thumbnail.match(/^data:([^;]+);base64,(.+)$/)
       if (match) {
-        const path = `${userId}/${projectId}/thumbnail.png`
+        const path = `${userId}/${projectId}/thumbnail_${Date.now()}.png`
         const byteChars = atob(match[2])
-        const byteArray = new Uint8Array(byteChars.length)
+        const byteArray =new Uint8Array(byteChars.length)
         for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i)
         const blob = new Blob([byteArray], { type: 'image/png' })
 
         await client.storage.from('project-assets').upload(path, blob, {
           contentType: 'image/png',
           upsert: true,
+          cacheControl: '0',
         })
         const { data } = client.storage.from('project-assets').getPublicUrl(path)
         thumbnailUrl = `${data.publicUrl}?t=${Date.now()}`
@@ -381,43 +394,43 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
     setExtractOpen(true)
   }
 
-const handleExtractConfirm = async () => {
-  if (!projectId || !userId) return
+  const handleExtractConfirm = useCallback(async () => {
+    if (!projectId || !userId) return
 
-  // block extraction if any selected slide has no background
-  const emptySlides = project.slides
-    .filter((s) => selectedSlideIds.includes(s.id))
-    .filter((s) => !s.backgroundImage)
-  if (emptySlides.length > 0) {
-    toast.error(`${emptySlides.map((s) => s.name).join(', ')} ${emptySlides.length === 1 ? 'has' : 'have'} no background map`)
-    return
-  }
+    // block extraction if any selected slide has no background
+    const emptySlides = project.slides
+      .filter((s) => selectedSlideIds.includes(s.id))
+      .filter((s) => !s.backgroundImage)
+    if (emptySlides.length > 0) {
+      toast.error(`${emptySlides.map((s) => s.name).join(', ')} ${emptySlides.length === 1 ? 'has' : 'have'} no background map`)
+      return
+    }
 
-  setExtractLoading(true)
+    setExtractLoading(true)
+    try {
+      // save project first so extraction copies storage URLs not base64
+      const saved = await handleSave()
+      if (!saved) return
 
-  // save project first so extraction copies storage URLs not base64
-  const saved = await handleSave()
-  if (!saved) {
-    setExtractLoading(false)
-    return
-  }
+      // capture thumbnail for the currently visible slide
+      const thumbnails: Record<string, string> = {}
+      if (stageRef.current && project.activeSlideId && selectedSlideIds.includes(project.activeSlideId)) {
+      thumbnails[project.activeSlideId] = stageRef.current.toDataURL({ pixelRatio: 1 })      }
 
-  // capture thumbnail for the currently visible slide
-  const thumbnails: Record<string, string> = {}
-  if (stageRef.current && project.activeSlideId && selectedSlideIds.includes(project.activeSlideId)) {
-    thumbnails[project.activeSlideId] = stageRef.current.toDataURL({ pixelRatio: 0.5 })
-  }
-
-  const { data, error } = await extractStrats(userId, projectId, selectedSlideIds, thumbnails)
-  if (error) {
-    toast.error('Failed to extract strats')
-  } else if (data) {
-    toast.success(`${data.length} strat${data.length > 1 ? 's' : ''} extracted to dashboard`)
-    setSelectedSlideIds([])
-    setExtractOpen(false)
-  }
-  setExtractLoading(false)
-}
+      const { data, error } = await extractStrats(userId, projectId, selectedSlideIds, thumbnails)
+      if (error) {
+        toast.error('Failed to extract strats')
+      } else if (data) {
+        toast.success(`${data.length} strat${data.length > 1 ? 's' : ''} extracted to dashboard`)
+        setSelectedSlideIds([])
+        setExtractOpen(false)
+      }
+    } catch {
+      toast.error('Failed to extract strats')
+    } finally {
+      setExtractLoading(false)
+    }
+  }, [projectId, userId, project.slides, project.activeSlideId, selectedSlideIds, handleSave])
 
   //SLIDE HANDLERS
 
@@ -692,12 +705,12 @@ const handleExtractConfirm = async () => {
     })
   }
 
-  const handleSelectObject = (objectId: string) => {
+  const handleSelectObject = useCallback((objectId: string) => {
     setSelectedObjectId(objectId)
     setActiveTool('select')
-  }
+  }, [])
 
-  const handleDragObject = (objectId: string, x: number, y: number) => {
+  const handleDragObject = useCallback((objectId: string, x: number, y: number) => {
     updateObjectInActiveSlide(objectId, (o) => ({
       ...o,
       canvas: {
@@ -706,16 +719,11 @@ const handleExtractConfirm = async () => {
         y: clamp(y, 0, STAGE_HEIGHT),
       },
     }))
-  }
-
-  const handleTransformObject = (objectId: string, node: Konva.Node) => {
-    const object = activeSlide?.objects.find((o) => o.id === objectId)
-    if (!object) return
-
+  }, [updateObjectInActiveSlide])
+  
+  const handleTransformObject = useCallback((objectId: string, node: Konva.Node) => {
     const scaleX = node.scaleX()
     const scaleY = node.scaleY()
-    const nextWidth = Math.max(10, object.canvas.width * scaleX)
-    const nextHeight = Math.max(10, object.canvas.height * scaleY)
 
     node.scaleX(1)
     node.scaleY(1)
@@ -727,13 +735,13 @@ const handleExtractConfirm = async () => {
         x: node.x(),
         y: node.y(),
         rotation: node.rotation(),
-        width: nextWidth,
-        height: nextHeight,
+        width: Math.max(10, prev.canvas.width * scaleX),
+        height: Math.max(10, prev.canvas.height * scaleY),
         scaleX: 1,
         scaleY: 1,
       },
     }))
-  }
+  }, [updateObjectInActiveSlide])
 
   // layers panel actions
 
@@ -751,14 +759,18 @@ const handleExtractConfirm = async () => {
     }))
   }
 
-  const handleMoveObjectUp = (objectId: string) => {
+const handleMoveObjectUp = useCallback((objectId: string) => {
     updateActiveSlide((slide) => {
       const sorted = [...slide.objects].sort((a, b) => b.canvas.zIndex - a.canvas.zIndex)
-      const index = sorted.findIndex((o) => o.id === objectId)
+      const visible = filterTagIds.length === 0
+        ? sorted
+        : sorted.filter((o) => o.metadata.tagIds.some((id) => filterTagIds.includes(id)))
+
+      const index = visible.findIndex((o) => o.id === objectId)
       if (index <= 0) return slide
 
-      const current = sorted[index]
-      const above = sorted[index - 1]
+      const current = visible[index]
+      const above = visible[index - 1]
       const currentZ = current.canvas.zIndex
       const aboveZ = above.canvas.zIndex
 
@@ -771,16 +783,20 @@ const handleExtractConfirm = async () => {
         }),
       }
     })
-  }
+  }, [updateActiveSlide, filterTagIds])
 
-  const handleMoveObjectDown = (objectId: string) => {
+  const handleMoveObjectDown = useCallback((objectId: string) => {
     updateActiveSlide((slide) => {
       const sorted = [...slide.objects].sort((a, b) => b.canvas.zIndex - a.canvas.zIndex)
-      const index = sorted.findIndex((o) => o.id === objectId)
-      if (index < 0 || index >= sorted.length - 1) return slide
+      const visible = filterTagIds.length === 0
+        ? sorted
+        : sorted.filter((o) => o.metadata.tagIds.some((id) => filterTagIds.includes(id)))
 
-      const current = sorted[index]
-      const below = sorted[index + 1]
+      const index = visible.findIndex((o) => o.id === objectId)
+      if (index < 0 || index >= visible.length - 1) return slide
+
+      const current = visible[index]
+      const below = visible[index + 1]
       const currentZ = current.canvas.zIndex
       const belowZ = below.canvas.zIndex
 
@@ -793,7 +809,7 @@ const handleExtractConfirm = async () => {
         }),
       }
     })
-  }
+  }, [updateActiveSlide, filterTagIds])
 
   // stage interaction
 
@@ -924,10 +940,10 @@ const handleExtractConfirm = async () => {
             key={object.id}
             object={object}
             isSelected={isSelected}
-            onSelect={() => handleSelectObject(object.id)}
-            onDragEnd={(x, y) => handleDragObject(object.id, x, y)}
-            onTransformEnd={(node) => handleTransformObject(object.id, node)}
-            nodeRef={(node) => { objectNodeMapRef.current[object.id] = node }}
+            onSelect={handleSelectObject}
+            onDragEnd={handleDragObject}
+            onTransformEnd={handleTransformObject}
+            objectNodeMapRef={objectNodeMapRef}
           />
         )
 

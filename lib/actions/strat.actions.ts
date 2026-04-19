@@ -75,28 +75,40 @@ async function copySlideAssets(
 ): Promise<StratSlideData> {
   const updated = structuredClone(slideData)
 
+  const copies: Promise<void>[] = []
+
   // Copy background image
   if (updated.slide.backgroundImage && updated.slide.backgroundImage.startsWith('http')) {
-    const { url } = await copyAssetToStrat(updated.slide.backgroundImage, userId, stratId)
-    if (url) updated.slide.backgroundImage = url
+    copies.push(
+      copyAssetToStrat(updated.slide.backgroundImage, userId, stratId).then(({ url }) => {
+        if (url) updated.slide.backgroundImage = url
+      })
+    )
   }
 
   // Copy icon srcs
   for (const icon of updated.icons) {
     if (icon.src.startsWith('http')) {
-      const { url } = await copyAssetToStrat(icon.src, userId, stratId)
-      if (url) icon.src = url
+      copies.push(
+        copyAssetToStrat(icon.src, userId, stratId).then(({ url }) => {
+          if (url) icon.src = url
+        })
+      )
     }
   }
 
   // Copy image/icon object srcs
   for (const obj of updated.slide.objects) {
     if ((obj.type === 'image' || obj.type === 'icon') && obj.src.startsWith('http')) {
-      const { url } = await copyAssetToStrat(obj.src, userId, stratId)
-      if (url) obj.src = url
+      copies.push(
+        copyAssetToStrat(obj.src, userId, stratId).then(({ url }) => {
+          if (url) obj.src = url
+        })
+      )
     }
   }
 
+  await Promise.all(copies)
   return updated
 }
 

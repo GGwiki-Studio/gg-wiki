@@ -3,30 +3,29 @@
 import { useEffect, useRef, useState } from 'react'
 
 import type { StratTag } from '@/components/builder/builder.types'
-import type { StratViewerHoverTooltipProps } from './strat-viewer.types'
+import type { StratViewerTooltipProps } from './strat-viewer.types'
 
-export default function StratViewerHoverTooltip({
-  hoveredObject,
+export default function StratViewerTooltip({
+  selectedObject,
   tags,
   containerRef,
-  onMouseEnter,
-  onMouseLeave,
-}: StratViewerHoverTooltipProps) {
+  onDismiss,
+}: StratViewerTooltipProps) {
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const [clampedPos, setClampedPos] = useState({ x: 0, y: 0 })
 
   useEffect(() => {
-    if (!hoveredObject || !containerRef.current || !tooltipRef.current) return
+    if (!selectedObject || !containerRef.current || !tooltipRef.current) return
 
     const container = containerRef.current.getBoundingClientRect()
     const tooltip = tooltipRef.current.getBoundingClientRect()
 
     const offset = 12
-    let x = hoveredObject.position.x + offset
-    let y = hoveredObject.position.y - 10
+    let x = selectedObject.position.x + offset
+    let y = selectedObject.position.y - 10
 
     if (x + tooltip.width > container.width) {
-      x = hoveredObject.position.x - tooltip.width - offset
+      x = selectedObject.position.x - tooltip.width - offset
     }
 
     if (y + tooltip.height > container.height) {
@@ -37,11 +36,11 @@ export default function StratViewerHoverTooltip({
     if (x < 8) x = 8
 
     setClampedPos({ x, y })
-  }, [hoveredObject, containerRef])
+  }, [selectedObject, containerRef])
 
-  if (!hoveredObject) return null
+  if (!selectedObject) return null
 
-  const { object } = hoveredObject
+  const { object } = selectedObject
   const objectTags = tags.filter((t) => object.metadata.tagIds.includes(t.id))
   const hasLabel = object.metadata.label.trim().length > 0
   const hasDescription = object.metadata.description.trim().length > 0
@@ -51,9 +50,7 @@ export default function StratViewerHoverTooltip({
   return (
     <div
       ref={tooltipRef}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      className="pointer-events-auto absolute z-20 min-w-[180px] max-w-[260px] rounded-[10px] border border-[#2a2a2a] bg-[#161616]/95 px-3.5 py-2.5 backdrop-blur-md"
+      className="pointer-events-auto absolute z-20 min-w-[180px] max-w-[260px] rounded-[10px] border border-[#2a2a2a] bg-[#161616]/95 px-3.5 py-2.5 backdrop-blur-md animate-in fade-in duration-150"
       style={{ left: clampedPos.x, top: clampedPos.y }}
     >
       {hasLabel && (

@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import useAuth from '@/components/hooks/useAuth'
 import { getOwnedStrats, getSavedStrats, deleteStrat, getStrat, renameStrat, toggleStratVisibility } from '@/lib/actions/strat.actions'
-import { generateStratHtml } from '@/lib/export/strat-html-export'
 import type { StratListItem } from '@/components/strat-viewer/strat.types'
 import type { StratSlideData } from '@/components/strat-viewer/strat.types'
 import type { DashboardSection, GalleryTab } from '@/components/dashboard/dashboard.types'
@@ -134,26 +133,6 @@ export default function DashboardPage() {
     setDeleteTarget(null)
   }
 
-  // export strat as standalone HTML file
-  const handleExportStrat = async (id: string) => {
-    if (!user) return
-
-    const { data, error } = await getStrat(id, user.id)
-    if (error || !data) {
-      toast.error('Failed to load strat for export')
-      return
-    }
-
-    const html = generateStratHtml(data.title, data.slideData)
-    const blob = new Blob([html], { type: 'text/html' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${data.title.replace(/[^a-zA-Z0-9-_ ]/g, '')}.html`
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.success('Strat exported')
-  }
 
   const handleRenameStrat = async (id: string, newTitle: string) => {
     if (!user) return
@@ -225,7 +204,6 @@ export default function DashboardPage() {
         onExpandStrat={handleExpandStrat}
         onCollapseStrat={handleCollapseStrat}
         onDeleteStrat={handleDeleteStrat}
-        onExportStrat={handleExportStrat}
         onRenameStrat={handleRenameStrat}
         onPublishStrat={handlePublishStrat}
         expandedStratId={expandedStratId}

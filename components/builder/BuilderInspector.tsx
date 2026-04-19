@@ -252,9 +252,6 @@ const BuilderInspector = ({
             className="w-full resize-none rounded border border-[#1e1e1e] bg-[#0d0d0d] px-2 py-1.5 text-xs text-[#bbb] outline-none focus:border-[#3b82f6] transition"
           />
         </Field>
-
-        {renderTypeSpecific()}
-
         {tags.length > 0 && (
           <Field label="Tags">
             <div className="flex flex-wrap gap-1.5">
@@ -266,6 +263,8 @@ const BuilderInspector = ({
           <p className="text-xs text-[#333]">No tags created yet.</p>
         )}
       </Section>
+
+      {renderTypeSpecific()}
 
       <Section label="canvas">
         <div className="grid grid-cols-2 gap-2">

@@ -31,7 +31,6 @@ export default function StratGalleryCard({
   onExpand,
   onCollapse,
   onDelete,
-  onExport,
   onRename,
   onPublish,
   onToggleVisibility,
@@ -81,9 +80,9 @@ export default function StratGalleryCard({
         onClick={() => !editing && onExpand(strat.id)}
         className="group cursor-pointer overflow-hidden rounded-[10px] border border-[#2a2a2a] bg-[#1e1e1e] transition-colors hover:border-[#3a3a3a]"
       >
-        <div className="flex h-[100px] items-center justify-center overflow-hidden bg-[#252525]">
+        <div className="flex aspect-[11/7] items-center justify-center overflow-hidden bg-[#252525]">
           {strat.thumbnailUrl ? (
-            <img src={strat.thumbnailUrl} alt={strat.title} className="h-full w-full object-cover" />
+            <img src={strat.thumbnailUrl} alt={strat.title} className="h-full w-full object-contain" />
           ) : (
             <span className="text-xs text-[#555]">No preview</span>
           )}
@@ -98,7 +97,6 @@ export default function StratGalleryCard({
               isPublished={isPublished}
               onExpand={() => onExpand(strat.id)}
               onDelete={() => onDelete(strat.id)}
-              onExport={() => onExport(strat.id)}
               onRename={startRename}
               onPublish={() => onPublish(strat.id)}
               onToggleVisibility={() => onToggleVisibility(strat.id)}
@@ -141,7 +139,6 @@ export default function StratGalleryCard({
             isPublished={isPublished}
             onExpand={() => onExpand(strat.id)}
             onDelete={() => onDelete(strat.id)}
-            onExport={() => onExport(strat.id)}
             onRename={startRename}
             onPublish={() => onPublish(strat.id)}
             onToggleVisibility={() => onToggleVisibility(strat.id)}
@@ -155,10 +152,11 @@ export default function StratGalleryCard({
           </button>
         </div>
       </div>
-
-      <div className="p-3">
+        <div className="p-3">
         {slideData ? (
-          <StratViewer slideData={slideData} />
+          <div className="mx-auto max-w-[1024px]">
+            <StratViewer slideData={slideData} />
+          </div>
         ) : (
           <div className="flex h-[200px] items-center justify-center">
             <span className="text-xs text-[#555]">Loading strat...</span>
@@ -175,7 +173,6 @@ function CardMenu({
   isPublished,
   onExpand,
   onDelete,
-  onExport,
   onRename,
   onPublish,
   onToggleVisibility,
@@ -185,7 +182,6 @@ function CardMenu({
   isPublished: boolean
   onExpand: () => void
   onDelete: () => void
-  onExport: () => void
   onRename: () => void
   onPublish: () => void
   onToggleVisibility: () => void
@@ -214,14 +210,6 @@ function CardMenu({
           >
             <Eye size={14} className="text-[#666]" />
             View
-          </DropdownMenu.Item>
-
-          <DropdownMenu.Item
-            onSelect={onExport}
-            className="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-[#ccc] outline-none hover:bg-[#252525]"
-          >
-            <Download size={14} className="text-[#666]" />
-            Save as HTML
           </DropdownMenu.Item>
 
           {owned && (

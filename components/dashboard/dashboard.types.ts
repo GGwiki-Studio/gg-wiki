@@ -30,7 +30,6 @@ export interface StratGalleryProps {
   onExpandStrat: (id: string) => void
   onCollapseStrat: () => void
   onDeleteStrat: (id: string) => void
-  onExportStrat: (id: string) => void
   onRenameStrat: (id: string, newTitle: string) => void
   onPublishStrat: (id: string) => void
   onToggleVisibility: (id: string) => void
@@ -59,7 +58,6 @@ export interface StratGalleryCardProps {
   onExpand: (id: string) => void
   onCollapse: () => void
   onDelete: (id: string) => void
-  onExport: (id: string) => void
   onRename: (id: string, newTitle: string) => void
   onPublish: (id: string) => void
   onToggleVisibility: (id: string) => void

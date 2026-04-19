@@ -56,19 +56,16 @@ function useContainerWidth(ref: React.RefObject<HTMLDivElement | null>): number 
   return width
 }
 
-// read-only image/icon renderer
 const ViewerImageObject = memo(({
   object,
   opacity,
-  isHovered,
-  onMouseEnter,
-  onMouseLeave,
+  isSelected,
+  onClick,
 }: {
   object: ImageBuilderObject | IconBuilderObject
   opacity: number
-  isHovered: boolean
-  onMouseEnter: () => void
-  onMouseLeave: () => void
+  isSelected: boolean
+  onClick: () => void
 }) => {
   const image = useLoadedImage(object.src)
   if (!image) return null
@@ -84,11 +81,11 @@ const ViewerImageObject = memo(({
       opacity={opacity}
       visible={object.canvas.visible}
       draggable={false}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      shadowEnabled={isHovered}
-      shadowColor={isHovered ? '#fff' : undefined}
-      shadowBlur={isHovered ? 10 : 0}
+      onClick={onClick}
+      onTap={onClick}
+      shadowEnabled={isSelected}
+      shadowColor={isSelected ? '#fff' : undefined}
+      shadowBlur={isSelected ? 10 : 0}
     />
   )
 })
@@ -98,13 +95,12 @@ ViewerImageObject.displayName = 'ViewerImageObject'
 export default function StratViewerCanvas({
   slide,
   tags,
-  icons,
   filterTagIds,
-  onHoverObject,
+  onSelectObject,
 }: StratViewerCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const stageRef = useRef<Konva.Stage | null>(null)
-  const [hoveredObjectId, setHoveredObjectId] = useState<string | null>(null)
+  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null)
 
   const containerWidth = useContainerWidth(containerRef)
   const stageScale = containerWidth / STAGE_WIDTH
@@ -117,31 +113,39 @@ export default function StratViewerCanvas({
     [slide.objects]
   )
 
-  // which objects match the active tag filter
   const objectMatchesFilter = useCallback((obj: BuilderObject): boolean => {
     if (filterTagIds.length === 0) return true
     return obj.metadata.tagIds.some((id) => filterTagIds.includes(id))
   }, [filterTagIds])
 
-  const handleMouseEnter = useCallback((obj: BuilderObject) => {
-    setHoveredObjectId(obj.id)
-
+    const handleObjectClick = useCallback((obj: BuilderObject) => {
     const stage = stageRef.current
     if (!stage) return
 
     const pos = stage.getPointerPosition()
     if (!pos) return
 
-    onHoverObject({
+    // double-click same object = dismiss
+    if (selectedObjectId === obj.id) {
+      setSelectedObjectId(null)
+      onSelectObject(null)
+      return
+    }
+
+    setSelectedObjectId(obj.id)
+    onSelectObject({
       object: obj,
       position: { x: pos.x, y: pos.y },
     })
-  }, [onHoverObject])
+  }, [onSelectObject, selectedObjectId])
 
-  const handleMouseLeave = useCallback(() => {
-    setHoveredObjectId(null)
-    onHoverObject(null)
-  }, [onHoverObject])
+  const handleStageClick = useCallback((e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+    // only dismiss when clicking empty space
+    if (e.target === e.target.getStage()) {
+      setSelectedObjectId(null)
+      onSelectObject(null)
+    }
+  }, [onSelectObject])
 
   const renderObject = useCallback((object: BuilderObject) => {
     if (!object.canvas.visible) return null
@@ -149,7 +153,7 @@ export default function StratViewerCanvas({
     const matches = objectMatchesFilter(object)
     const dimmed = filterTagIds.length > 0 && !matches
     const opacity = dimmed ? 0.15 : object.canvas.opacity
-    const isHovered = hoveredObjectId === object.id
+    const isSelected = selectedObjectId === object.id
 
     const commonProps = {
       x: object.canvas.x,
@@ -157,11 +161,11 @@ export default function StratViewerCanvas({
       rotation: object.canvas.rotation,
       opacity,
       draggable: false,
-      onMouseEnter: () => handleMouseEnter(object),
-      onMouseLeave: handleMouseLeave,
-      shadowEnabled: isHovered && !dimmed,
-      shadowColor: isHovered ? '#fff' : undefined,
-      shadowBlur: isHovered ? 10 : 0,
+      onClick: () => handleObjectClick(object),
+      onTap: () => handleObjectClick(object),
+      shadowEnabled: isSelected && !dimmed,
+      shadowColor: isSelected ? '#fff' : undefined,
+      shadowBlur: isSelected ? 10 : 0,
       listening: !dimmed,
     }
 
@@ -253,16 +257,15 @@ export default function StratViewerCanvas({
             key={object.id}
             object={object}
             opacity={opacity}
-            isHovered={isHovered && !dimmed}
-            onMouseEnter={() => handleMouseEnter(object)}
-            onMouseLeave={handleMouseLeave}
+            isSelected={isSelected && !dimmed}
+            onClick={() => handleObjectClick(object)}
           />
         )
 
       default:
         return null
     }
-  }, [hoveredObjectId, filterTagIds, objectMatchesFilter, handleMouseEnter, handleMouseLeave])
+  }, [selectedObjectId, filterTagIds, objectMatchesFilter, handleObjectClick])
 
   return (
     <div ref={containerRef} className="w-full overflow-hidden bg-[#111]">
@@ -271,6 +274,8 @@ export default function StratViewerCanvas({
         width={containerWidth}
         height={scaledStageHeight}
         scale={{ x: stageScale, y: stageScale }}
+        onClick={handleStageClick}
+        onTap={handleStageClick}
       >
         <Layer>
           {backgroundImage && (

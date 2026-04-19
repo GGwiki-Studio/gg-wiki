@@ -14,7 +14,6 @@ export default function StratGallery({
   onExpandStrat,
   onCollapseStrat,
   onDeleteStrat,
-  onExportStrat,
   onRenameStrat,
   onPublishStrat,
   onToggleVisibility,
@@ -56,7 +55,6 @@ export default function StratGallery({
               onExpand={onExpandStrat}
               onCollapse={onCollapseStrat}
               onDelete={onDeleteStrat}
-              onExport={onExportStrat}
               onRename={onRenameStrat}
               onPublish={onPublishStrat}
               onToggleVisibility={onToggleVisibility}

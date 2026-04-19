@@ -6,7 +6,7 @@ export interface StratViewerProps {
   slideData: StratSlideData
 }
 
-export interface HoveredObjectInfo {
+export interface SelectedObjectInfo {
   object: BuilderObject
   position: { x: number; y: number }
 }
@@ -14,17 +14,15 @@ export interface HoveredObjectInfo {
 export interface StratViewerCanvasProps {
   slide: StratSlideData['slide']
   tags: StratTag[]
-  icons: StratSlideData['icons']
   filterTagIds: string[]
-  onHoverObject: (info: HoveredObjectInfo | null) => void
+  onSelectObject: (info: SelectedObjectInfo | null) => void
 }
 
-export interface StratViewerHoverTooltipProps {
-  hoveredObject: HoveredObjectInfo | null
+export interface StratViewerTooltipProps {
+  selectedObject: SelectedObjectInfo | null
   tags: StratTag[]
   containerRef: React.RefObject<HTMLDivElement | null>
-  onMouseEnter: () => void
-  onMouseLeave: () => void
+  onDismiss: () => void
 }
 
 export interface StratViewerTagFilterProps {
