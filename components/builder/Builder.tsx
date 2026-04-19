@@ -697,7 +697,7 @@ const handleExtractConfirm = async () => {
     setActiveTool('select')
   }, [])
 
-  const handleDragObject = (objectId: string, x: number, y: number) => {
+  const handleDragObject = useCallback((objectId: string, x: number, y: number) => {
     updateObjectInActiveSlide(objectId, (o) => ({
       ...o,
       canvas: {
@@ -706,16 +706,11 @@ const handleExtractConfirm = async () => {
         y: clamp(y, 0, STAGE_HEIGHT),
       },
     }))
-  }
-
-  const handleTransformObject = (objectId: string, node: Konva.Node) => {
-    const object = activeSlide?.objects.find((o) => o.id === objectId)
-    if (!object) return
-
+  }, [updateObjectInActiveSlide])
+  
+  const handleTransformObject = useCallback((objectId: string, node: Konva.Node) => {
     const scaleX = node.scaleX()
     const scaleY = node.scaleY()
-    const nextWidth = Math.max(10, object.canvas.width * scaleX)
-    const nextHeight = Math.max(10, object.canvas.height * scaleY)
 
     node.scaleX(1)
     node.scaleY(1)
@@ -727,13 +722,13 @@ const handleExtractConfirm = async () => {
         x: node.x(),
         y: node.y(),
         rotation: node.rotation(),
-        width: nextWidth,
-        height: nextHeight,
+        width: Math.max(10, prev.canvas.width * scaleX),
+        height: Math.max(10, prev.canvas.height * scaleY),
         scaleX: 1,
         scaleY: 1,
       },
     }))
-  }
+  }, [updateObjectInActiveSlide])
 
   // layers panel actions
 
