@@ -692,10 +692,10 @@ const handleExtractConfirm = async () => {
     })
   }
 
-  const handleSelectObject = (objectId: string) => {
+  const handleSelectObject = useCallback((objectId: string) => {
     setSelectedObjectId(objectId)
     setActiveTool('select')
-  }
+  }, [])
 
   const handleDragObject = (objectId: string, x: number, y: number) => {
     updateObjectInActiveSlide(objectId, (o) => ({
