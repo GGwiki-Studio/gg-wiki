@@ -64,6 +64,7 @@ function PageContent(){
         {games?.map((game) => (
           <GameCard 
             key={game.slug}
+            gameId={game.id}
             gameSlug={game.slug}
             name={game.name}
             thumbnailUrl={game.cover_image_url}
