@@ -48,11 +48,11 @@ const GameCard = ({ gameSlug, name, thumbnailUrl, members }: GameCardProps) => {
                     className="object-cover"
                     />
                 </div>
-                <div className="w-full flex justify-between items-center">
+                <div className="w-full flex flex-col justify-between 3xl:flex-row items-start 3xl:items-center gap-2">
                     <h3 className="text-xl font-bold">{name}</h3>
                     <div className="flex items-center gap-2">
-                        <p className="text-gray-400">{members}</p>
                         <Image src="/people.svg" alt="members" width={20} height={20} className="filter invert"/>
+                        <p className="text-gray-400">{members}</p>
                     </div>
                 </div>
             </div>

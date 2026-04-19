@@ -33,7 +33,7 @@ const StartCard = ({ stratId, title, author, game, thumbnailUrl, map, views, dat
                 <div className="w-full items-center">
                     <h3 className="text-xl font-bold h-14 flex">{title}</h3>
                 </div>
-                <div className="w-full flex justify-between items-center">
+                <div className="w-full flex flex-col justify-between 3xl:flex-row items-start 3xl:items-center gap-2">
                     <h3 className="pl-2 pr-2 text-md text-gray-200 bg-gray-800 rounded-2xl">{game}</h3>
                     <h2 className="pl-2 pr-2 text-md text-gray-200 bg-gray-700 rounded-2xl">{map}</h2>
                 </div>
