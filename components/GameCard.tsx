@@ -64,10 +64,10 @@ const GameCard = ({ gameId, gameSlug, name, thumbnailUrl, members }: GameCardPro
     }
 
     return (
-        <article className="bg-gray-950 rounded-lg p-4 shadow-lg">
+        <article className="bg-[#2a2a2a] rounded-lg overflow-hidden border border-[#353535] transition-all hover:border-[#4a4a4a]">
             <Link href={`/games/${gameSlug}`}>
                 <div className="flex flex-col gap-4">
-                    <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-800">
+                    <div className="relative w-full h-40">
                         <Image
                         src={thumbnailUrl}
                         alt={name}
@@ -91,8 +91,8 @@ const GameCard = ({ gameId, gameSlug, name, thumbnailUrl, members }: GameCardPro
                     disabled={loading}
                     className={`w-full font-bold py-2 px-4 rounded cursor-pointer transition disabled:opacity-50 ${
                         joined
-                            ? 'bg-gray-700 hover:bg-gray-800 text-gray-300'
-                            : 'bg-gray-500 hover:bg-gray-700 text-white'
+                        ? 'bg-[#3a3a3a] hover:bg-[#4a4a4a] text-[#ccc]'
+                        : 'bg-[#3a3a3a] hover:bg-[#4a4a4a] text-[#ccc]'
                     }`}
                 >
                     {loading ? '...' : joined ? 'Leave' : 'Join'}
