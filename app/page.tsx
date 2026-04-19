@@ -1,8 +1,11 @@
 'use client'
 import GameCard from "@/components/GameCard";
 import GameCardList from "@/components/GameCardList"
+import HomeCarousel from "@/components/HomeCarousel"
+import LatestActivity from "@/components/LatestActivity"
+import WebsiteGuide from "@/components/WebsiteGuide"
 import NewsLetter from "@/components/NewsLetter"
-import StartCard from "@/components/StartCard";
+import StartCard from "@/components/StratCard";
 import StratCardList from "@/components/StratCardList"
 import { Button } from "@/components/ui/button";
 import { getAllGames } from "@/lib/actions/game.actions";
@@ -101,11 +104,6 @@ function PageContent(){
   if(isSearch){
     return(
       <main>
-      <div className="items-center flex-col text-center bg-linear-to-br from-black to-gray-800 flex">
-        <h1 className="text-4xl font-bold m-8">
-          YOUR #1 PLATFORM TO SHARE YOUR STARTS <br />OF YOUR FAVORITE GAMES ONLINE!
-        </h1>
-      </div>
       
       <section className="pl-4">
         <div className="w-full flex justify-between items-center">
@@ -165,26 +163,35 @@ function PageContent(){
         </div>
       </section>
 
-      <div className="items-center flex-col text-center bg-linear-to-br from-gray-800 to-black flex mt-8">
-        <NewsLetter />
-        <p className="text-white">&copy; 2026 GGWIKI. All rights reserved.</p>
+      <div className="items-center flex-col text-center bg-[#1a1a1a] flex mt-8 py-6 border-t border-[#333]">
+        <p className="text-[#666] text-sm">&copy; 2026 GGWIKI. All rights reserved.</p>
       </div>
     </main>
     )
   }
 
-  return (
+return (
     <main>
-      <div className="items-center flex-col text-center bg-linear-to-br from-black to-gray-800 flex">
-        <h1 className="text-4xl font-bold m-8">
-          YOUR #1 PLATFORM TO SHARE YOUR STARTS <br />OF YOUR FAVORITE GAMES ONLINE!
-        </h1>
-      </div>
+      <HomeCarousel />
+      <hr className="border-[#333] mx-8" />
       <GameCardList />
+      <hr className="border-[#333] mx-8" />
+      <section className="px-8 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-8">
+          <div>
+            <h2 className="text-xl font-bold mb-4">Latest Activity</h2>
+            <LatestActivity />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold mb-4">Getting Started</h2>
+            <WebsiteGuide />
+          </div>
+        </div>
+      </section>
+      <hr className="border-[#333] mx-8" />
       <StratCardList />
-      <div className="items-center flex-col text-center bg-linear-to-br from-gray-800 to-black flex mt-8">
-        <NewsLetter />
-        <p className="text-white">&copy; 2026 GGWIKI. All rights reserved.</p>
+        <div className="items-center flex-col text-center bg-[#1a1a1a] flex mt-8 py-6 border-t border-[#333]">
+        <p className="text-[#666] text-sm">&copy; 2026 GGWIKI. All rights reserved.</p>
       </div>
     </main>
   )

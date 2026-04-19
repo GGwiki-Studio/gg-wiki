@@ -1,4 +1,5 @@
 'use client';
+
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -49,6 +50,7 @@ const GameCard = ({ gameId, gameSlug, name, thumbnailUrl, members }: GameCardPro
             } else {
                 setJoined(false)
                 setMemberCount((prev) => Math.max(0, prev - 1))
+                window.dispatchEvent(new Event('game-membership-changed'))
             }
         } else {
             const { error } = await joinGame(user.id, gameId)
@@ -57,16 +59,17 @@ const GameCard = ({ gameId, gameSlug, name, thumbnailUrl, members }: GameCardPro
             } else {
                 setJoined(true)
                 setMemberCount((prev) => prev + 1)
+                window.dispatchEvent(new Event('game-membership-changed'))
             }
         }
         setLoading(false)
     }
 
     return (
-        <article className="bg-gray-950 rounded-lg p-4 shadow-lg">
+        <article className="bg-[#2a2a2a] rounded-lg overflow-hidden border border-[#353535] transition-all hover:border-[#4a4a4a]">
             <Link href={`/games/${gameSlug}`}>
                 <div className="flex flex-col gap-4">
-                    <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-800">
+                    <div className="relative w-full h-40">
                         <Image
                         src={thumbnailUrl}
                         alt={name}
@@ -75,23 +78,23 @@ const GameCard = ({ gameId, gameSlug, name, thumbnailUrl, members }: GameCardPro
                         className="object-cover"
                         />
                     </div>
-                    <div className="w-full flex justify-between items-center">
-                        <h3 className="text-xl font-bold">{name}</h3>
+                    <div className="px-3 py-2.5 flex justify-between items-center">
+                        <h3 className="text-sm font-semibold text-[#eee] truncate">{name}</h3>
                         <div className="flex items-center gap-2">
-                            <p className="text-gray-400">{memberCount}</p>
-                            <Image src="/people.svg" alt="members" width={20} height={20} className="filter invert"/>
+                            <p className="text-xs text-[#888]">{memberCount}</p>
+                            <Image src="/people.svg" alt="members" width={16} height={16} className="filter invert opacity-60"/>
                         </div>
                     </div>
                 </div>
             </Link>
-            <div className="mt-4 flex gap-4 w-full">
+            <div className="px-3 pb-3">
                 <button
                     onClick={handleJoinClick}
                     disabled={loading}
                     className={`w-full font-bold py-2 px-4 rounded cursor-pointer transition disabled:opacity-50 ${
                         joined
-                            ? 'bg-gray-700 hover:bg-gray-800 text-gray-300'
-                            : 'bg-gray-500 hover:bg-gray-700 text-white'
+                        ? 'bg-[#3a3a3a] hover:bg-[#4a4a4a] text-[#ccc]'
+                        : 'bg-[#3a3a3a] hover:bg-[#4a4a4a] text-[#ccc]'
                     }`}
                 >
                     {loading ? '...' : joined ? 'Leave' : 'Join'}

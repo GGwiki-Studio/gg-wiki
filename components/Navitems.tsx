@@ -41,7 +41,7 @@ const Navitems = () => {
   }
 
   return (
-    <nav className="text-xl flex items-center gap-8 oswald-light">
+    <nav className="text-base flex items-center gap-8 font-medium tracking-wide">
       {navItems.map((item) => {
         const href = getHref(item);
         return (
