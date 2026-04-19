@@ -759,14 +759,18 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
     }))
   }
 
-  const handleMoveObjectUp = (objectId: string) => {
+const handleMoveObjectUp = useCallback((objectId: string) => {
     updateActiveSlide((slide) => {
       const sorted = [...slide.objects].sort((a, b) => b.canvas.zIndex - a.canvas.zIndex)
-      const index = sorted.findIndex((o) => o.id === objectId)
+      const visible = filterTagIds.length === 0
+        ? sorted
+        : sorted.filter((o) => o.metadata.tagIds.some((id) => filterTagIds.includes(id)))
+
+      const index = visible.findIndex((o) => o.id === objectId)
       if (index <= 0) return slide
 
-      const current = sorted[index]
-      const above = sorted[index - 1]
+      const current = visible[index]
+      const above = visible[index - 1]
       const currentZ = current.canvas.zIndex
       const aboveZ = above.canvas.zIndex
 
@@ -779,16 +783,20 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
         }),
       }
     })
-  }
+  }, [updateActiveSlide, filterTagIds])
 
-  const handleMoveObjectDown = (objectId: string) => {
+  const handleMoveObjectDown = useCallback((objectId: string) => {
     updateActiveSlide((slide) => {
       const sorted = [...slide.objects].sort((a, b) => b.canvas.zIndex - a.canvas.zIndex)
-      const index = sorted.findIndex((o) => o.id === objectId)
-      if (index < 0 || index >= sorted.length - 1) return slide
+      const visible = filterTagIds.length === 0
+        ? sorted
+        : sorted.filter((o) => o.metadata.tagIds.some((id) => filterTagIds.includes(id)))
 
-      const current = sorted[index]
-      const below = sorted[index + 1]
+      const index = visible.findIndex((o) => o.id === objectId)
+      if (index < 0 || index >= visible.length - 1) return slide
+
+      const current = visible[index]
+      const below = visible[index + 1]
       const currentZ = current.canvas.zIndex
       const belowZ = below.canvas.zIndex
 
@@ -801,7 +809,7 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
         }),
       }
     })
-  }
+  }, [updateActiveSlide, filterTagIds])
 
   // stage interaction
 
