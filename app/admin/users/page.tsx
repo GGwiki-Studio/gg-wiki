@@ -8,7 +8,7 @@ interface AdminUser {
     id: string
     username: string
     avatar_url: string | null
-    role: 'user' | 'admin'
+    role: 'user' | 'admin' | 'moderator'
     created_at: string
 }
 
@@ -26,7 +26,7 @@ export default function AdminUsers() {
     useEffect(() => {
         if (loading) return
 
-            if (!user || userRole !== 'admin') {
+            if (!user || (userRole !== 'admin' && userRole !== 'moderator')) {
                 router.push('/')
                 return
             }
@@ -55,14 +55,18 @@ export default function AdminUsers() {
         }
     }
 
-    async function handleRoleChange(userId: string, newRole: 'user' | 'admin') {
+    async function handleRoleChange(userId: string, newRole: 'user' | 'admin' | 'moderator') {
         if (userId === user?.id && newRole === 'user') {
             alert('⚠️ You cannot demote yourself! Ask another admin to do this.')
             loadUsers(currentPage)
             return
         }
 
-        setUpdatingId(userId)
+        if (userRole !== 'admin') {
+        alert('⚠ Only admins can change user roles.')
+        return
+    }
+    setUpdatingId(userId)
         try {
             await updateUserRole(userId, newRole)
             setUsers(prev =>
@@ -76,7 +80,7 @@ export default function AdminUsers() {
         }
     }
 
-    if (loading || !user || userRole !== 'admin') {
+    if (loading || !user || (userRole !== 'admin' && userRole !== 'moderator')) {
         return (
             <div className="min-h-screen flex items-center justify-center">
             <p className="text-xl">Loading...</p>
@@ -146,7 +150,7 @@ export default function AdminUsers() {
                 className={`px-3 py-1 rounded text-xs font-medium ${
                     u.role === 'admin'
                     ? 'bg-red-600'
-                    : 'bg-gray-600'
+                    : u.role === 'moderator' ? 'bg-purple-600' : 'bg-gray-600'
                 }`}
                 >
                 {u.role}
@@ -166,13 +170,14 @@ export default function AdminUsers() {
                     onChange={e =>
                         handleRoleChange(
                             u.id,
-                            e.target.value as 'user' | 'admin'
+                            e.target.value as 'user' | 'admin' | 'moderator'
                         )
                     }
                     disabled={updatingId !== null}
                     className="bg-[#1a1a1a] border border-gray-600 rounded px-3 py-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                     <option value="user">User</option>
+                    <option value="moderator">Moderator</option>
                     <option value="admin">Admin</option>
                     </select>
                 )}

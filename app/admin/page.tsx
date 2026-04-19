@@ -6,6 +6,8 @@ import { getAllUsers, getAllGames, getReports } from '@/lib/admin'
 
 export default function AdminDashboard() {
     const { user, userRole, loading } = useAuth()
+    const isAdmin = userRole === 'admin'
+    const isModerator = userRole === 'moderator'
     const router = useRouter()
     const hasFetched = useRef(false)
     const [stats, setStats] = useState({
@@ -18,23 +20,23 @@ export default function AdminDashboard() {
     useEffect(() => {
         if (loading) return
 
-            if (!user || userRole !== 'admin') {
-                router.push('/')
-                return
-            }
+        if (!user || (!isAdmin && !isModerator)) {
+            router.push('/')
+            return
+        }
 
-            if (hasFetched.current) return
-                hasFetched.current = true
+        if (hasFetched.current) return
+        hasFetched.current = true
 
-                loadStats()
+        loadStats()
     }, [user, userRole, loading])
 
     async function loadStats() {
         try {
             const [usersResult, gamesResult, reportsResult] = await Promise.all([
                 getAllUsers(1, 1),
-                                                                                getAllGames(1, 1),
-                                                                                getReports('pending', 1, 1),
+                getAllGames(1, 1),
+                getReports('pending', 1, 1),
             ])
             setStats({
                 users: usersResult.total,
@@ -48,7 +50,7 @@ export default function AdminDashboard() {
         }
     }
 
-    if (loading || !user || userRole !== 'admin') {
+    if (loading || !user || (!isAdmin && !isModerator)) {
         return (
             <div className="min-h-screen flex items-center justify-center">
             <p className="text-xl">Loading...</p>
@@ -68,18 +70,22 @@ export default function AdminDashboard() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-[#252525] p-6 rounded-lg border border-gray-700">
-        <h2 className="text-lg text-gray-400 mb-1">Total Users</h2>
-        <p className="text-3xl font-bold">
-        {dataLoading ? '—' : stats.users}
-        </p>
-        </div>
-        <div className="bg-[#252525] p-6 rounded-lg border border-gray-700">
-        <h2 className="text-lg text-gray-400 mb-1">Games</h2>
-        <p className="text-3xl font-bold">
-        {dataLoading ? '—' : stats.games}
-        </p>
-        </div>
+        {isAdmin && (
+            <div className="bg-[#252525] p-6 rounded-lg border border-gray-700">
+            <h2 className="text-lg text-gray-400 mb-1">Total Users</h2>
+            <p className="text-3xl font-bold">
+            {dataLoading ? '—' : stats.users}
+            </p>
+            </div>
+        )}
+        {isAdmin && (
+            <div className="bg-[#252525] p-6 rounded-lg border border-gray-700">
+            <h2 className="text-lg text-gray-400 mb-1">Games</h2>
+            <p className="text-3xl font-bold">
+            {dataLoading ? '—' : stats.games}
+            </p>
+            </div>
+        )}
         <div className="bg-[#252525] p-6 rounded-lg border border-gray-700">
         <h2 className="text-lg text-gray-400 mb-1">Pending Reports</h2>
         <p className="text-3xl font-bold text-yellow-400">
@@ -92,18 +98,22 @@ export default function AdminDashboard() {
         <div className="bg-[#252525] p-6 rounded-lg border border-gray-700">
         <h2 className="text-2xl font-semibold mb-4">Quick Actions</h2>
         <div className="flex gap-4 flex-wrap">
-        <a
-        href="/admin/users"
-        className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-medium transition"
-        >
-        👥 Manage Users
-        </a>
-        <a
-        href="/admin/games"
-        className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-medium transition"
-        >
-        🎮 Manage Games
-        </a>
+        {isAdmin && (
+            <a
+            href="/admin/users"
+            className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-medium transition"
+            >
+            👥 Manage Users
+            </a>
+        )}
+        {isAdmin && (
+            <a
+            href="/admin/games"
+            className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-medium transition"
+            >
+            🎮 Manage Games
+            </a>
+        )}
         <a
         href="/admin/reports"
         className="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-medium transition"
