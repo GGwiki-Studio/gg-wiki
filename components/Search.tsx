@@ -89,7 +89,7 @@ function PageContent(){
       <select 
         value={category}
         onChange={(e) => setCategory(e.target.value)}
-        className="bg-transparent outline-none text-xl w-24"
+        className="bg-transparent outline-none text-xl w-24 color-scheme-dark"
       >
         <option value="all">All</option>
         <option value="games">Games</option>
