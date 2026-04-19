@@ -104,11 +104,6 @@ function PageContent(){
   if(isSearch){
     return(
       <main>
-      <div className="items-center flex-col text-center bg-linear-to-br from-black to-gray-800 flex">
-        <h1 className="text-4xl font-bold m-8">
-          YOUR #1 PLATFORM TO SHARE YOUR STARTS <br />OF YOUR FAVORITE GAMES ONLINE!
-        </h1>
-      </div>
       
       <section className="pl-4">
         <div className="w-full flex justify-between items-center">
@@ -168,9 +163,8 @@ function PageContent(){
         </div>
       </section>
 
-      <div className="items-center flex-col text-center bg-linear-to-br from-gray-800 to-black flex mt-8">
-        <NewsLetter />
-        <p className="text-white">&copy; 2026 GGWIKI. All rights reserved.</p>
+      <div className="items-center flex-col text-center bg-[#1a1a1a] flex mt-8 py-6 border-t border-[#333]">
+        <p className="text-[#666] text-sm">&copy; 2026 GGWIKI. All rights reserved.</p>
       </div>
     </main>
     )
