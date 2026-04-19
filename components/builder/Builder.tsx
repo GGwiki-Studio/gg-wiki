@@ -133,21 +133,33 @@ const CanvasImageObject = memo(({
   onSelect,
   onDragEnd,
   onTransformEnd,
-  nodeRef,
+  objectNodeMapRef,
 }: {
   object: ImageBuilderObject | IconBuilderObject
   isSelected: boolean
-  onSelect: () => void
-  onDragEnd: (x: number, y: number) => void
-  onTransformEnd: (node: Konva.Image) => void
-  nodeRef: (node: Konva.Image | null) => void
+  onSelect: (objectId: string) => void
+  onDragEnd: (objectId: string, x: number, y: number) => void
+  onTransformEnd: (objectId: string, node: Konva.Node) => void
+  objectNodeMapRef: React.MutableRefObject<Record<string, Konva.Node | null>>
 }) => {
   const image = useLoadedImage(object.src)
+
+  const handleSelect = useCallback(() => onSelect(object.id), [onSelect, object.id])
+  const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+    onDragEnd(object.id, e.target.x(), e.target.y())
+  }, [onDragEnd, object.id])
+  const handleTransformEnd = useCallback((e: Konva.KonvaEventObject<Event>) => {
+    onTransformEnd(object.id, e.target as Konva.Node)
+  }, [onTransformEnd, object.id])
+  const handleRef = useCallback((node: Konva.Image | null) => {
+    objectNodeMapRef.current[object.id] = node
+  }, [objectNodeMapRef, object.id])
+
   if (!image) return null
 
   return (
     <KonvaImage
-      ref={nodeRef}
+      ref={handleRef}
       image={image}
       x={object.canvas.x}
       y={object.canvas.y}
@@ -157,10 +169,10 @@ const CanvasImageObject = memo(({
       opacity={object.canvas.opacity}
       visible={object.canvas.visible}
       draggable={!object.canvas.locked}
-      onClick={onSelect}
-      onTap={onSelect}
-      onDragEnd={(e) => onDragEnd(e.target.x(), e.target.y())}
-      onTransformEnd={(e) => onTransformEnd(e.target as Konva.Image)}
+      onClick={handleSelect}
+      onTap={handleSelect}
+      onDragEnd={handleDragEnd}
+      onTransformEnd={handleTransformEnd}
       shadowEnabled={isSelected}
       shadowColor={isSelected ? '#60a5fa' : undefined}
       shadowBlur={isSelected ? 12 : 0}
@@ -919,10 +931,10 @@ const handleExtractConfirm = async () => {
             key={object.id}
             object={object}
             isSelected={isSelected}
-            onSelect={() => handleSelectObject(object.id)}
-            onDragEnd={(x, y) => handleDragObject(object.id, x, y)}
-            onTransformEnd={(node) => handleTransformObject(object.id, node)}
-            nodeRef={(node) => { objectNodeMapRef.current[object.id] = node }}
+            onSelect={handleSelectObject}
+            onDragEnd={handleDragObject}
+            onTransformEnd={handleTransformObject}
+            objectNodeMapRef={objectNodeMapRef}
           />
         )
 
