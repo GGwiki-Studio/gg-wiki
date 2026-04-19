@@ -65,6 +65,26 @@ const StrategyPage = () => {
     const [loading, setLoading] = useState(true)
     const [submittingComment, setSubmittingComment] = useState(false)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
+    const [viewRecorded, setViewRecorded] = useState(false)
+
+    const getViewStorageKeys = () => {
+        const anonKey = `viewed-strategy-${stratId}`
+        const userKey = user?.id ? `viewed-strategy-${user.id}-${stratId}` : null
+        return { anonKey, userKey }
+    }
+
+    const hasLocalStrategyView = () => {
+        if (typeof window === 'undefined') return false
+        const { anonKey, userKey } = getViewStorageKeys()
+        return Boolean(localStorage.getItem(anonKey) || (userKey && localStorage.getItem(userKey)))
+    }
+
+    const markLocalStrategyView = () => {
+        if (typeof window === 'undefined') return
+        const { anonKey, userKey } = getViewStorageKeys()
+        localStorage.setItem(anonKey, 'true')
+        if (userKey) localStorage.setItem(userKey, 'true')
+    }
 
     useEffect(() => {
         const fetchStrategy = async () => {
@@ -80,10 +100,16 @@ const StrategyPage = () => {
                     if (data?.slideData) setSlideData(data.slideData)
                 }
 
-                await incrementViewCount(stratId)
-                setStrategy(prev =>
-                    prev ? { ...prev, view_count: (prev.view_count || 0) + 1 } : null
-                )
+                if (!viewRecorded && !hasLocalStrategyView()) {
+                    const incremented = await incrementViewCount(stratId, user?.id)
+                    if (incremented) {
+                        setStrategy(prev =>
+                            prev ? { ...prev, view_count: (prev.view_count || 0) + 1 } : null
+                        )
+                    }
+                    markLocalStrategyView()
+                    setViewRecorded(true)
+                }
             } catch (error) {
                 const message =
                     error instanceof Error ? error.message : String(error)

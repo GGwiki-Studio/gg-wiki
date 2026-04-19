@@ -193,29 +193,82 @@ export const getStrat = async (stratId: string, userId?: string) => {
     }
 }
 
-export const incrementViewCount = async (stratId: string) => {
-    const { error } = await client.rpc('increment_view_count', { strategy_id: stratId })
+export const incrementViewCount = async (stratId: string, userId?: string): Promise<boolean> => {
+    if (userId) {
+        try {
+            const { data: existingView, error: existingViewError } = await client
+                .from('strategy_views')
+                .select('id')
+                .eq('strategy_id', stratId)
+                .eq('user_id', userId)
+                .maybeSingle()
 
-    if (error) {
-        console.warn('Failed to increment view count:', error)
-        // Fallback: try to increment manually
-        const { data: currentStrat } = await client
-            .from('strategies')
-            .select('view_count')
-            .eq('id', stratId)
-            .single()
+            if (existingViewError) {
+                console.warn('Failed to check strategy view record:', existingViewError)
+            } else if (existingView) {
+                return false
+            } else {
+                const { error: insertError } = await client
+                    .from('strategy_views')
+                    .insert({ strategy_id: stratId, user_id: userId })
 
-        if (currentStrat) {
-            const { error: updateError } = await client
-                .from('strategies')
-                .update({ view_count: (currentStrat.view_count || 0) + 1 })
-                .eq('id', stratId)
+                if (!insertError) {
+                    const { data: currentStrat, error: currentStratError } = await client
+                        .from('strategies')
+                        .select('view_count')
+                        .eq('id', stratId)
+                        .single()
 
-            if (updateError) {
-                console.error('Failed to increment view count manually:', updateError)
+                    if (currentStratError || !currentStrat) {
+                        console.warn('Failed to fetch strategy view_count:', currentStratError)
+                    } else {
+                        const { error: updateError } = await client
+                            .from('strategies')
+                            .update({ view_count: (currentStrat.view_count || 0) + 1 })
+                            .eq('id', stratId)
+
+                        if (updateError) {
+                            console.error('Failed to increment strategy view count:', updateError)
+                        } else {
+                            return true
+                        }
+                    }
+                } else {
+                    console.warn('Failed to record strategy view:', insertError)
+                }
             }
+        } catch (error) {
+            console.warn('Error recording strategy view:', error)
         }
     }
+
+    const { error } = await client.rpc('increment_view_count', { strategy_id: stratId })
+
+    if (!error) {
+        return true
+    }
+
+    console.warn('Failed to increment view count:', error)
+    const { data: currentStrat } = await client
+        .from('strategies')
+        .select('view_count')
+        .eq('id', stratId)
+        .single()
+
+    if (currentStrat) {
+        const { error: updateError } = await client
+            .from('strategies')
+            .update({ view_count: (currentStrat.view_count || 0) + 1 })
+            .eq('id', stratId)
+
+        if (!updateError) {
+            return true
+        }
+
+        console.error('Failed to increment view count manually:', updateError)
+    }
+
+    return false
 }
 
 export const likeStrat = async (stratId: string, userId: string, voteType: 'upvote' | 'downvote' = 'upvote') => {
