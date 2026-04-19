@@ -39,8 +39,14 @@ const GameCard = ({ gameSlug, name, thumbnailUrl, members }: GameCardProps) => {
     <article className="bg-gray-950 rounded-lg p-4 shadow-lg">
         <Link href={`/games/${gameSlug}`}>
             <div className="flex flex-col gap-4">
-                <div className="rounded-lg overflow-hidden ">
-                    <Image src={thumbnailUrl} alt={name} width={320} height={170} />
+                <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-800">
+                    <Image
+                    src={thumbnailUrl}
+                    alt={name}
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    className="object-cover"
+                    />
                 </div>
                 <div className="w-full flex justify-between items-center">
                     <h3 className="text-xl font-bold">{name}</h3>
