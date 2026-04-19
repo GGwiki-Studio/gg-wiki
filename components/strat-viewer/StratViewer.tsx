@@ -2,41 +2,25 @@
 
 import { useCallback, useRef, useState } from 'react'
 
-import type { StratViewerProps, HoveredObjectInfo } from './strat-viewer.types'
+import type { StratViewerProps, SelectedObjectInfo } from './strat-viewer.types'
 import StratViewerCanvas from './StratViewerCanvas'
-import StratViewerHoverTooltip from './StratViewerHoverTooltip'
+import StratViewerTooltip from './StratViewerTooltip'
 import StratViewerTagFilter from './StratViewerTagFilter'
 
 export default function StratViewer({ slideData }: StratViewerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [filterTagIds, setFilterTagIds] = useState<string[]>([])
-  const [hoveredObject, setHoveredObject] = useState<HoveredObjectInfo | null>(null)
-  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [selectedObject, setSelectedObject] = useState<SelectedObjectInfo | null>(null)
 
-  const { slide, tags, icons } = slideData
+  const { slide, tags } = slideData
 
-  // delayed hide so mouse can travel from object to tooltip
-  const scheduleHide = useCallback(() => {
-    hideTimeoutRef.current = setTimeout(() => {
-      setHoveredObject(null)
-    }, 150)
+  const handleSelectObject = useCallback((info: SelectedObjectInfo | null) => {
+    setSelectedObject(info)
   }, [])
 
-  const cancelHide = useCallback(() => {
-    if (hideTimeoutRef.current) {
-      clearTimeout(hideTimeoutRef.current)
-      hideTimeoutRef.current = null
-    }
+  const handleDismiss = useCallback(() => {
+    setSelectedObject(null)
   }, [])
-
-  const handleHoverObject = useCallback((info: HoveredObjectInfo | null) => {
-    if (info) {
-      cancelHide()
-      setHoveredObject(info)
-    } else {
-      scheduleHide()
-    }
-  }, [cancelHide, scheduleHide])
 
   const handleToggleTag = useCallback((tagId: string) => {
     setFilterTagIds((prev) =>
@@ -63,9 +47,8 @@ export default function StratViewer({ slideData }: StratViewerProps) {
         <StratViewerCanvas
           slide={slide}
           tags={tags}
-          icons={icons}
           filterTagIds={filterTagIds}
-          onHoverObject={handleHoverObject}
+          onSelectObject={handleSelectObject}
         />
 
         <StratViewerTagFilter
@@ -75,23 +58,20 @@ export default function StratViewer({ slideData }: StratViewerProps) {
           onClearFilters={handleClearFilters}
         />
 
-        <StratViewerHoverTooltip
-          hoveredObject={hoveredObject}
+        <StratViewerTooltip
+          selectedObject={selectedObject}
           tags={tags}
           containerRef={containerRef}
-          onMouseEnter={cancelHide}
-          onMouseLeave={scheduleHide}
+          onDismiss={handleDismiss}
         />
       </div>
 
       <div className="flex items-center justify-between border-t border-[#2a2a2a] px-3 py-1.5">
-        <span className="text-[10px] text-[#555]">Hover objects to inspect</span>
+        <span className="text-[10px] text-[#555]">Click objects to inspect</span>
         <span className="text-[10px] text-[#555]">
           {filterTagIds.length > 0
-            ? `${visibleCount} of ${objectCount} objects`
-            : `${objectCount} objects`
-          }
-          {tags.length > 0 && ` · ${tags.length} tags`}
+            ? `${visibleCount}/${objectCount} objects`
+            : `${objectCount} objects`}
         </span>
       </div>
     </div>
