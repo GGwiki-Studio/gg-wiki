@@ -319,15 +319,16 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
     if (thumbnail) {
       const match = thumbnail.match(/^data:([^;]+);base64,(.+)$/)
       if (match) {
-        const path = `${userId}/${projectId}/thumbnail.png`
+        const path = `${userId}/${projectId}/thumbnail_${Date.now()}.png`
         const byteChars = atob(match[2])
-        const byteArray = new Uint8Array(byteChars.length)
+        const byteArray =new Uint8Array(byteChars.length)
         for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i)
         const blob = new Blob([byteArray], { type: 'image/png' })
 
         await client.storage.from('project-assets').upload(path, blob, {
           contentType: 'image/png',
           upsert: true,
+          cacheControl: '0',
         })
         const { data } = client.storage.from('project-assets').getPublicUrl(path)
         thumbnailUrl = `${data.publicUrl}?t=${Date.now()}`
