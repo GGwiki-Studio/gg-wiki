@@ -18,6 +18,7 @@ interface AdminGame {
 
 export default function AdminGames() {
     const { user, userRole, loading } = useAuth()
+const isAdmin = userRole === 'admin'
     const router = useRouter()
     const hasFetched = useRef(false)
     const [games, setGames] = useState<AdminGame[]>([])

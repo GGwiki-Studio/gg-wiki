@@ -17,7 +17,7 @@ interface Strat {
 }
 
 // ========== USER & AUTH TYPES ==========
-type UserRole = 'user' | 'admin';
+type UserRole = 'user' | 'admin' | 'moderator';
 
 interface User {
   id: string;
