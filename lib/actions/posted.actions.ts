@@ -92,7 +92,7 @@ export const createStrat = async (formData: CreateStrat, author: any) => {
     return data
 }
 
-export const getStrat = async (stratId: string) => {
+export const getStrat = async (stratId: string, userId?: string) => {
     // Fetch the strategy itself (with author + game + map)
     const { data: stratData, error: stratError } = await client
         .from('strategies')
@@ -165,12 +165,30 @@ export const getStrat = async (stratId: string) => {
         console.warn('Failed to count strategy votes:', votesCountError)
     }
 
+    let userVoteType: 'upvote' | 'downvote' | null = null
+
+    if (userId) {
+        const { data: userVoteData, error: userVoteError } = await client
+            .from('votes')
+            .select('vote_type')
+            .eq('strategy_id', stratId)
+            .eq('user_id', userId)
+            .maybeSingle()
+
+        if (userVoteError) {
+            console.warn('Failed to load user vote for strategy:', userVoteError)
+        } else if (userVoteData) {
+            userVoteType = userVoteData.vote_type === 1 ? 'upvote' : 'downvote'
+        }
+    }
+
     return {
         ...stratData,
         user: Array.isArray(stratData.user) ? stratData.user[0] : stratData.user,
         game: Array.isArray(stratData.game) ? stratData.game[0] : stratData.game,
         map: Array.isArray(stratData.map) ? stratData.map[0] : stratData.map,
         likes_count: votesCount ?? 0,
+        user_vote_type: userVoteType,
         tags: Array.isArray(tagData) ? tagData.map((st: any) => st.tag?.name).filter(Boolean) : []
     }
 }
