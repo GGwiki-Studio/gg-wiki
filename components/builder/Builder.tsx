@@ -393,43 +393,44 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
     setExtractOpen(true)
   }
 
-const handleExtractConfirm = async () => {
-  if (!projectId || !userId) return
+  const handleExtractConfirm = useCallback(async () => {
+    if (!projectId || !userId) return
 
-  // block extraction if any selected slide has no background
-  const emptySlides = project.slides
-    .filter((s) => selectedSlideIds.includes(s.id))
-    .filter((s) => !s.backgroundImage)
-  if (emptySlides.length > 0) {
-    toast.error(`${emptySlides.map((s) => s.name).join(', ')} ${emptySlides.length === 1 ? 'has' : 'have'} no background map`)
-    return
-  }
+    // block extraction if any selected slide has no background
+    const emptySlides = project.slides
+      .filter((s) => selectedSlideIds.includes(s.id))
+      .filter((s) => !s.backgroundImage)
+    if (emptySlides.length > 0) {
+      toast.error(`${emptySlides.map((s) => s.name).join(', ')} ${emptySlides.length === 1 ? 'has' : 'have'} no background map`)
+      return
+    }
 
-  setExtractLoading(true)
+    setExtractLoading(true)
+    try {
+      // save project first so extraction copies storage URLs not base64
+      const saved = await handleSave()
+      if (!saved) return
 
-  // save project first so extraction copies storage URLs not base64
-  const saved = await handleSave()
-  if (!saved) {
-    setExtractLoading(false)
-    return
-  }
+      // capture thumbnail for the currently visible slide
+      const thumbnails: Record<string, string> = {}
+      if (stageRef.current && project.activeSlideId && selectedSlideIds.includes(project.activeSlideId)) {
+        thumbnails[project.activeSlideId] = stageRef.current.toDataURL({ pixelRatio: 0.5 })
+      }
 
-  // capture thumbnail for the currently visible slide
-  const thumbnails: Record<string, string> = {}
-  if (stageRef.current && project.activeSlideId && selectedSlideIds.includes(project.activeSlideId)) {
-    thumbnails[project.activeSlideId] = stageRef.current.toDataURL({ pixelRatio: 0.5 })
-  }
-
-  const { data, error } = await extractStrats(userId, projectId, selectedSlideIds, thumbnails)
-  if (error) {
-    toast.error('Failed to extract strats')
-  } else if (data) {
-    toast.success(`${data.length} strat${data.length > 1 ? 's' : ''} extracted to dashboard`)
-    setSelectedSlideIds([])
-    setExtractOpen(false)
-  }
-  setExtractLoading(false)
-}
+      const { data, error } = await extractStrats(userId, projectId, selectedSlideIds, thumbnails)
+      if (error) {
+        toast.error('Failed to extract strats')
+      } else if (data) {
+        toast.success(`${data.length} strat${data.length > 1 ? 's' : ''} extracted to dashboard`)
+        setSelectedSlideIds([])
+        setExtractOpen(false)
+      }
+    } catch {
+      toast.error('Failed to extract strats')
+    } finally {
+      setExtractLoading(false)
+    }
+  }, [projectId, userId, project.slides, project.activeSlideId, selectedSlideIds, handleSave])
 
   //SLIDE HANDLERS
 
