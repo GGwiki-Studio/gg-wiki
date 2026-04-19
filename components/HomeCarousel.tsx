@@ -150,7 +150,7 @@ const HomeCarousel = () => {
             src={activeGame.cover_image_url}
             alt=""
             fill
-            className="object-cover scale-110 blur-[40px] opacity-30 transition-opacity duration-500"
+            className="object-cover scale-110 blur-[20px] opacity-50 saturate-150 brightness-75 transition-opacity duration-500"
             sizes="100vw"
             priority
           />
