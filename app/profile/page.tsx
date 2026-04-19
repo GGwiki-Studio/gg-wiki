@@ -172,10 +172,9 @@ const ProfilePage = () => {
       <div className="flex">
         {/* Sidebar */}
         <aside className="w-56 border-r border-gray-800 bg-[#0b0b0b] p-6">
-          <div className="mb-8 text-2xl font-bold">GGWIKI</div>
+          <div className="mb-8 text-2xl font-bold">OPTIONS</div>
           <nav className="space-y-2 text-sm text-gray-300">
             <Link href={`/dashboard/${user?.id ?? ''}`} className="block rounded-md px-3 py-2 hover:bg-gray-900">Dashboard</Link>
-            <Link href={`/dashboard/${user?.id ?? ''}/gallery`} className="block rounded-md px-3 py-2 hover:bg-gray-900">Gallery</Link>
             <Link href="/games" className="block rounded-md px-3 py-2 hover:bg-gray-900">Games</Link>
             <Link href="/projects" className="block rounded-md px-3 py-2 hover:bg-gray-900">Create</Link>
           </nav>
