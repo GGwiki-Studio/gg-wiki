@@ -1,6 +1,7 @@
 'use client';
 import Link from "next/link"
 import GameCard from "./GameCard"
+import CardSkeleton from "./CardSkeleton"
 import{ client } from "@/api/client"
 
 
@@ -43,41 +44,35 @@ const GameCardList = () => {
 
   if (loading) {
     return (
-      <section className="pl-4">
-          <div className="w-full flex justify-between items-center">
-              <h2 className="text-3xl font-bold m-8">Explore Most Popular Games</h2>
+      <section className="px-8 py-6">
+          <div className="w-full flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">Explore Most Popular Games</h2>
               <Link href="/games">
-                  <Button className="bg-black hover:bg-gray-700 text-white font-bold py-2 px-4 rounded cursor-pointer m-8">
+                  <Button className=
+                  "bg-[#2a2a2a] hover:bg-[#333] text-[#ccc] border border-[#333] font-medium py-1.5 px-4 rounded cursor-pointer text-sm">
                       more
                   </Button>
               </Link>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 px-8">
-              {[...Array(5)].map((_, i) => (
-                  <div key={i} className="animate-pulse">
-                      <div className="bg-gray-300 h-48 rounded-t-lg"></div>
-                      <div className="bg-gray-200 h-24 rounded-b-lg p-4">
-                          <div className="h-4 bg-gray-400 rounded w-3/4 mb-2"></div>
-                          <div className="h-3 bg-gray-400 rounded w-1/2"></div>
-                      </div>
-                  </div>
-              ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+              <CardSkeleton count={5} imageHeight="h-40" />
           </div>
       </section>
     )
   }
 
   return (
-    <section className="pl-4">
-        <div className="w-full flex justify-between items-center">
-            <h2 className="text-3xl font-bold m-8">Explore Most Popular Games</h2>
+    <section className="px-8 py-6">
+        <div className="w-full flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Explore Most Popular Games</h2>
             <Link href="/games">
-                <Button className="bg-black hover:bg-gray-700 text-white font-bold py-2 px-4 rounded cursor-pointer m-8">
+                <Button className="
+                bg-[#2a2a2a] hover:bg-[#333] text-[#ccc] border border-[#333] font-medium py-2 px-4 rounded cursor-pointer m-8">
                     more
                 </Button>
             </Link>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 px-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           {!loading && data.length === 0 && <p className="col-span-5 text-center text-gray-500 py-8">No games found.</p>}
 
           {!loading && data.map((game) => (

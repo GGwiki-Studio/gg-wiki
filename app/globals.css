@@ -157,9 +157,12 @@
   }
 }
 
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 @layer components {
   .navbar {
-    @apply flex items-center justify-between mx-auto w-full px-14 py-4 bg-black max-sm:px-4;
+    @apply flex items-center justify-between mx-auto w-full px-14 py-4 bg-[#111] max-sm:px-4 border-b border-[#333];
   }
 
   .radio-button {

@@ -85,8 +85,7 @@ function PageContent(){
   }
 
   return (
-    <div className="h-10 gap-3 w-full max-w-xl border border-gray-300 flex items-center px-4 bg-black mx:hidden">
-      <select 
+      <div className="h-10 gap-3 w-full max-w-xl border border-[#444] rounded-none flex items-center px-4 bg-[#1a1a1a] mx:hidden">      <select 
         value={category}
         onChange={(e) => setCategory(e.target.value)}
         className="bg-transparent outline-none text-xl w-24"

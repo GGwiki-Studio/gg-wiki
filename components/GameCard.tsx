@@ -1,4 +1,5 @@
 'use client';
+
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -11,8 +12,6 @@ interface GameCardProps {
     thumbnailUrl: string;
     members: number;
 }
-
-
 
 const GameCard = ({ gameSlug, name, thumbnailUrl, members }: GameCardProps) => {
     const [joined, setJoined] = useState(false);
@@ -36,27 +35,33 @@ const GameCard = ({ gameSlug, name, thumbnailUrl, members }: GameCardProps) => {
     }
 
     return (
-    <article className="bg-gray-950 rounded-lg p-4 shadow-lg">
+    <article className="bg-[#2a2a2a] rounded-lg overflow-hidden border border-[#353535] transition-all hover:border-[#4a4a4a] hover:shadow-lg hover:shadow-black/20">
         <Link href={`/games/${gameSlug}`}>
-            <div className="flex flex-col gap-4">
-                <div className="rounded-lg overflow-hidden ">
-                    <Image src={thumbnailUrl} alt={name} width={320} height={170} />
-                </div>
-                <div className="w-full flex justify-between items-center">
-                    <h3 className="text-xl font-bold">{name}</h3>
-                    <div className="flex items-center gap-2">
-                        <p className="text-gray-400">{members}</p>
-                        <Image src="/people.svg" alt="members" width={20} height={20} className="filter invert"/>
-                    </div>
+            <div className="relative w-full h-40">
+                <Image
+                    src={thumbnailUrl}
+                    alt={name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 20vw"
+                />
+            </div>
+            <div className="px-3 py-2.5 flex justify-between items-center">
+                <h3 className="text-sm font-semibold text-[#eee] truncate">{name}</h3>
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                    <p className="text-xs text-[#888]">{members}</p>
+                    <Image src="/people.svg" alt="members" width={16} height={16} className="filter invert opacity-60"/>
                 </div>
             </div>
         </Link>
-        <div className="mt-4 flex gap-4 w-full">
-            <button onClick={(e) => handleJoinClick(e)} className="w-full bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded cursor-pointer">
+        <div className="px-3 pb-3">
+            <button
+                onClick={(e) => handleJoinClick(e)}
+                className="w-full bg-[#3a3a3a] hover:bg-[#4a4a4a] text-[#ccc] text-sm font-medium py-1.5 rounded cursor-pointer transition-colors"
+            >
                 {joined ? "Leave" : "Join"}
             </button>
         </div>
-        
     </article>
   )
 }

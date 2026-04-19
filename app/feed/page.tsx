@@ -1,7 +1,7 @@
 'use client'
 
 import MapFilter from "@/components/MapFilter";
-import StartCard from "@/components/StartCard";
+import StartCard from "@/components/StratCard";
 import { getAllStrats } from "@/lib/actions/posted.actions";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";

@@ -307,7 +307,7 @@ const StrategyPage = () => {
                 </div>
 
                 {/* Strategy Content */}
-                <Card className="mb-8 bg-gray-950 border-gray-950">
+                <Card className="mb-8 bg-[#2a2a2a] border-[#333]">
                     <CardContent>
                         <div className="prose prose-invert max-w-none">
                             <div className="whitespace-pre-wrap text-gray-200 leading-relaxed">
@@ -320,10 +320,10 @@ const StrategyPage = () => {
                 {/* Vote and Comment Actions */}
                 <div className="flex items-center gap-4 mb-8">
                     <div className="flex items-center gap-2">
-                        <Button onClick={() => handleVote('upvote')} className={`flex items-center gap-2 ${voteType === 'upvote' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-950 hover:bg-gray-600 text-gray-200 border-gray-600'}`}>
+                        <Button onClick={() => handleVote('upvote')} className={`flex items-center gap-2 ${voteType === 'upvote' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-[#2a2a2a] hover:bg-[#333] text-gray-200 border-[#333]'}`}>
                             <ThumbsUp size={18} className={voteType === 'upvote' ? 'fill-current' : ''} />
                         </Button>
-                        <Button onClick={() => handleVote('downvote')} className={`flex items-center gap-2 ${voteType === 'downvote' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-950 hover:bg-gray-600 text-gray-200 border-gray-600'}`}>
+                        <Button onClick={() => handleVote('downvote')} className={`flex items-center gap-2 ${voteType === 'downvote' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-[#2a2a2a] hover:bg-[#333] text-gray-200 border-[#333]'}`}>
                             <ThumbsDown size={18} className={voteType === 'downvote' ? 'fill-current' : ''} />
                         </Button>
                         <span className="text-gray-400">
@@ -336,7 +336,7 @@ const StrategyPage = () => {
                 </div>
 
                 {/* Comments Section */}
-                <Card className="bg-gray-950 border-gray-950">
+                <Card className="bg-[#2a2a2a] border-[#333]">
                     <CardHeader>
                         <CardTitle className="text-gray-200 text-xl">Comments</CardTitle>
                     </CardHeader>
@@ -344,8 +344,8 @@ const StrategyPage = () => {
 
                         {user ? (
                             <div className="space-y-4">
-                                <Textarea placeholder="Add a comment..." value={newComment} onChange={e => setNewComment(e.target.value)} className="bg-gray-800 border-gray-800 text-white" rows={3} />
-                                <Button onClick={handleAddComment} disabled={submittingComment || !newComment.trim()} className="bg-gray-700 hover:bg-gray-800">
+                                <Textarea placeholder="Add a comment..." value={newComment} onChange={e => setNewComment(e.target.value)} className="bg-[#1a1a1a] border-[#333] text-white" rows={3} />
+                                <Button onClick={handleAddComment} disabled={submittingComment || !newComment.trim()} className="bg-[#333] hover:bg-[#444]">
                                     {submittingComment ? 'Posting...' : 'Post Comment'}
                                 </Button>
                             </div>
