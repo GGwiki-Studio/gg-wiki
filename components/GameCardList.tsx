@@ -18,7 +18,7 @@ const GameCardList = () => {
       try {
         const { data: gameData, error } = await client
           .from('games')
-          .select('slug, name, cover_image_url, member_count')
+          .select('id, slug, name, cover_image_url, member_count')
           .eq('is_active', true)
           .order('member_count', { ascending: false })
           .limit(5)        
@@ -83,6 +83,7 @@ const GameCardList = () => {
           {!loading && data.map((game) => (
             <GameCard
               key={game.slug}
+              gameId={game.id}
               gameSlug={game.slug}
               name={game.name}
               thumbnailUrl={game.cover_image_url}

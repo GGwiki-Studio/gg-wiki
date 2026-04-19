@@ -1,4 +1,5 @@
 interface Game {
+  id: string;
   slug: string;
   name: string;
   cover_image_url: string;
