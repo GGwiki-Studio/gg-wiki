@@ -1,4 +1,5 @@
 'use client';
+
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -75,16 +76,16 @@ const GameCard = ({ gameId, gameSlug, name, thumbnailUrl, members }: GameCardPro
                         className="object-cover"
                         />
                     </div>
-                    <div className="w-full flex justify-between items-center">
-                        <h3 className="text-xl font-bold">{name}</h3>
+                    <div className="px-3 py-2.5 flex justify-between items-center">
+                        <h3 className="text-sm font-semibold text-[#eee] truncate">{name}</h3>
                         <div className="flex items-center gap-2">
-                            <p className="text-gray-400">{memberCount}</p>
-                            <Image src="/people.svg" alt="members" width={20} height={20} className="filter invert"/>
+                            <p className="text-xs text-[#888]">{memberCount}</p>
+                            <Image src="/people.svg" alt="members" width={16} height={16} className="filter invert opacity-60"/>
                         </div>
                     </div>
                 </div>
             </Link>
-            <div className="mt-4 flex gap-4 w-full">
+            <div className="px-3 pb-3">
                 <button
                     onClick={handleJoinClick}
                     disabled={loading}
