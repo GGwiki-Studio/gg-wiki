@@ -25,6 +25,7 @@ interface Strategy {
     created_at: string
     strat_id: string | null
     likes_count: number
+    user_vote_type?: 'upvote' | 'downvote' | null
     thumbnail_url?: string | null
     user: {
         id: string
@@ -68,9 +69,10 @@ const StrategyPage = () => {
     useEffect(() => {
         const fetchStrategy = async () => {
             try {
-                const stratData = await getStrat(stratId)
+                const stratData = await getStrat(stratId, user?.id)
                 setStrategy(stratData)
                 setVotesCount(stratData.likes_count || 0)
+                setVoteType(stratData.user_vote_type ?? null)
 
                 // fetch slide_data if strat_id exists for the interactive viewer
                 if (stratData.strat_id) {
