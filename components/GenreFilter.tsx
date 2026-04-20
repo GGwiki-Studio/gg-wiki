@@ -56,6 +56,7 @@ function PageContent(){
           <SelectItem value="action">Action</SelectItem>
           <SelectItem value="adventure">Adventure</SelectItem>
           <SelectItem value="role-playing">Role-Playing</SelectItem>
+          <SelectItem value="souls-like">Souls-Like</SelectItem>
           <SelectItem value="strategy">Strategy</SelectItem>
           <SelectItem value="simulation">Simulation</SelectItem>
           <SelectItem value="sports">Sports</SelectItem>
