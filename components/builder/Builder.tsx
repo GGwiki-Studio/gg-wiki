@@ -203,6 +203,8 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
   const [extractOpen, setExtractOpen] = useState(false)
   const [extractLoading, setExtractLoading] = useState(false)
 
+  const [bgNaturalSize, setBgNaturalSize] = useState<{ width: number; height: number } | null>(null);
+
   const skipDirtyRef = useRef(false) 
   const stageRef = useRef<Konva.Stage | null>(null)
   const transformerRef = useRef<Konva.Transformer | null>(null)
@@ -624,17 +626,28 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
   // background actions
 
   const handleUploadBackground = async (file: File) => {
-    const error = validateBackgroundFile(file)
-    if (error) { toast.error(error); return }
-
-    try {
-      const src = await readFileAsDataUrl(file)
-      updateActiveSlide((slide) => ({ ...slide, backgroundImage: src }))
-      toast.success('Map uploaded')
-    } catch {
-      toast.error('Failed to read file. Please try again.')
-    }
+  const error = validateBackgroundFile(file);
+  if (error) {
+    toast.error(error);
+    return;
   }
+
+  try {
+    const src = await readFileAsDataUrl(file);
+    
+    // Load image to get natural dimensions
+    const img = new window.Image();
+    img.src = src;
+    await new Promise((resolve) => { img.onload = resolve; });
+    
+    setBgNaturalSize({ width: img.width, height: img.height });
+    
+    updateActiveSlide((slide) => ({ ...slide, backgroundImage: src }));
+    toast.success('Map uploaded');
+  } catch {
+    toast.error('Failed to read file. Please try again.');
+  }
+};
 
   const handleClearBackground = () => {
     updateActiveSlide((slide) => ({ ...slide, backgroundImage: null }))
@@ -1012,16 +1025,36 @@ const handleMoveObjectUp = useCallback((objectId: string) => {
               onMouseDown={handleStageMouseDown}
             >
               <Layer>
-                {backgroundImage ? (
-                  <KonvaImage
-                    image={backgroundImage}
-                    x={0}
-                    y={0}
-                    width={STAGE_WIDTH}
-                    height={STAGE_HEIGHT}
-                    listening={false}
-                  />
-                ) : null}
+                {backgroundImage && bgNaturalSize && (() => {
+                  const stageRatio = STAGE_WIDTH / STAGE_HEIGHT;
+                  const imageRatio = bgNaturalSize.width / bgNaturalSize.height;
+                  
+                  let drawWidth = STAGE_WIDTH;
+                  let drawHeight = STAGE_HEIGHT;
+                  let offsetX = 0;
+                  let offsetY = 0;
+                  
+                  if (imageRatio > stageRatio) {
+                    // Image is wider → fit to width, height will be smaller
+                    drawHeight = STAGE_WIDTH / imageRatio;
+                    offsetY = (STAGE_HEIGHT - drawHeight) / 2;
+                  } else {
+                    // Image is taller → fit to height, width will be smaller
+                    drawWidth = STAGE_HEIGHT * imageRatio;
+                    offsetX = (STAGE_WIDTH - drawWidth) / 2;
+                  }
+                  
+                  return (
+                    <KonvaImage
+                      image={backgroundImage}
+                      x={offsetX}
+                      y={offsetY}
+                      width={drawWidth}
+                      height={drawHeight}
+                      listening={false}
+                    />
+                  );
+                })()}
 
                 {visibleObjects.map(renderObject)}
 
