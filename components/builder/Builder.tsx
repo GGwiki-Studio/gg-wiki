@@ -1040,16 +1040,32 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
               onMouseDown={handleStageMouseDown}
             >
               <Layer>
-                {backgroundImage ? (
-                  <KonvaImage
-                    image={backgroundImage}
-                    x={0}
-                    y={0}
-                    width={STAGE_WIDTH}
-                    height={STAGE_HEIGHT}
-                    listening={false}
-                  />
-                ) : null}
+                {backgroundImage ? (() => {
+                  const imgWidth = backgroundImage.width
+                  const imgHeight = backgroundImage.height
+                
+                  const scale = Math.min(
+                    STAGE_WIDTH / imgWidth,
+                    STAGE_HEIGHT / imgHeight
+                  )
+                
+                  const width = imgWidth * scale
+                  const height = imgHeight * scale
+                
+                  const x = (STAGE_WIDTH - width) / 2
+                  const y = (STAGE_HEIGHT - height) / 2
+                
+                  return (
+                    <KonvaImage
+                      image={backgroundImage}
+                      x={x}
+                      y={y}
+                      width={width}
+                      height={height}
+                      listening={false}
+                    />
+                  )
+                })() : null}
 
                 {visibleObjects.map(renderObject)}
 
