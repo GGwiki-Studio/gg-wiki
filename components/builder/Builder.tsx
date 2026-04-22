@@ -435,7 +435,31 @@ const Builder = ({ initialProject, projectId, userId }: BuilderProps) => {
         stageRef.current.batchDraw()
       }
 
-      const thumbnail = stageRef.current?.toDataURL({ pixelRatio: 0.5 }) || null
+      let thumbnail = null
+
+      if (stageRef.current && backgroundImage) {
+        const imgWidth = backgroundImage.width
+        const imgHeight = backgroundImage.height
+      
+        const scale = Math.min(
+          STAGE_WIDTH / imgWidth,
+          STAGE_HEIGHT / imgHeight
+        )
+      
+        const width = imgWidth * scale
+        const height = imgHeight * scale
+      
+        const x = (STAGE_WIDTH - width) / 2
+        const y = (STAGE_HEIGHT - height) / 2
+      
+        thumbnail = stageRef.current.toDataURL({
+          x,
+          y,
+          width,
+          height,
+          pixelRatio: 0.5,
+        })
+      }
 
       // Restore viewport
       if (stageRef.current) {
